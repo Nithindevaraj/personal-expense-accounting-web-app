@@ -172,17 +172,9 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
       {/* Top Header & Quick Actions */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
         <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-              Transactions Ledger
-            </h1>
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-              {sorted.length} / {transactions.length} rows
-            </span>
-          </div>
-          <p className="text-sm text-slate-500">
-            Replicating the Google Sheet ledger with conditional formatting, attachments & search
-          </p>
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+            Transactions Ledger
+          </h1>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">

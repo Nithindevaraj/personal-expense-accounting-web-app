@@ -157,7 +157,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
               </span>
             </div>
             <p className="text-sm text-slate-500">
-              Replicating the Google Sheet formula: SUMIFS based on Date Range and Project Tags
+              Track income, expenses, and net profit margins across active projects
             </p>
           </div>
 
