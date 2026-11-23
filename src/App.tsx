@@ -14,7 +14,7 @@ import {
   saveStoredTransactions,
   saveUserProfile,
 } from './utils/storage';
-import { Navbar, type ActiveTab } from './components/Navbar';
+import { Navbar, type ActiveTab, type TabPosition } from './components/Navbar';
 import { DashboardView } from './components/DashboardView';
 import { TransactionsView } from './components/TransactionsView';
 import { ProjectsView } from './components/ProjectsView';
@@ -31,6 +31,17 @@ export const App: React.FC = () => {
   const [incomeCategories, setIncomeCategories] = useState<string[]>(getStoredIncomeCategories);
   const [expenseCategories, setExpenseCategories] = useState<string[]>(getStoredExpenseCategories);
   const [userProfile, setUserProfile] = useState<UserProfile>(getUserProfile);
+  const [tabPosition, setTabPosition] = useState<TabPosition>(() => {
+    return (localStorage.getItem('accounting_tab_position') as TabPosition) || 'bottom';
+  });
+
+  const handleToggleTabPosition = () => {
+    setTabPosition((prev) => {
+      const next = prev === 'bottom' ? 'subbar' : 'bottom';
+      localStorage.setItem('accounting_tab_position', next);
+      return next;
+    });
+  };
 
   // Modals
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
@@ -241,10 +252,16 @@ export const App: React.FC = () => {
         netBalance={netBalance}
         transactionCount={transactions.length}
         projectCount={projects.length}
+        tabPosition={tabPosition}
+        onToggleTabPosition={handleToggleTabPosition}
       />
 
       {/* Main Content Area */}
-      <main className="grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+      <main
+        className={`grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 ${
+          tabPosition === 'bottom' ? 'pb-24' : 'pb-10'
+        }`}
+      >
         {activeTab === 'dashboard' && (
           <DashboardView
             transactions={transactions}
@@ -322,7 +339,11 @@ export const App: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200/80 bg-white py-4 mt-auto text-center text-xs text-slate-400">
+      <footer
+        className={`border-t border-slate-200/80 bg-white py-4 mt-auto text-center text-xs text-slate-400 ${
+          tabPosition === 'bottom' ? 'mb-16' : ''
+        }`}
+      >
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>Personal Accounting & Cost Center Engine</span>
           <span className="flex items-center gap-1 font-mono text-[11px] text-slate-500">
