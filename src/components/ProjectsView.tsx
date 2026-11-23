@@ -143,29 +143,29 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-12 animate-fade-in">
+    <div className="space-y-4 sm:space-y-6 pb-12 animate-fade-in">
       {/* Top Header & Date Range Controls (Matching Sheet Cells A1:C2) */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
                 Project Accounting & Cost Centers
               </h1>
               <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                {projects.length} Tagged Projects
+                {projects.length} Tags
               </span>
             </div>
-            <p className="text-sm text-slate-500">
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
               Track income, expenses, and net profit margins across active projects
             </p>
           </div>
 
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap w-full lg:w-auto justify-between lg:justify-end">
             {/* Date Range B2 & C2 Filter */}
-            <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider px-2">
-                Date Range
+            <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 text-xs">
+              <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider px-1">
+                Dates
               </span>
               <div className="flex items-center gap-1">
                 <input
@@ -173,7 +173,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                   value={fromDate}
                   onChange={(e) => setFromDate(e.target.value)}
                   placeholder="From"
-                  className="px-2 py-1 text-xs bg-white border border-slate-200 rounded-lg text-slate-700 font-medium"
+                  className="px-2 py-1 text-base sm:text-xs bg-white border border-slate-200 rounded-lg text-slate-700 font-medium max-w-[125px] sm:max-w-none"
                 />
                 <span className="text-xs text-slate-400">to</span>
                 <input
@@ -181,7 +181,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                   value={toDate}
                   onChange={(e) => setToDate(e.target.value)}
                   placeholder="To"
-                  className="px-2 py-1 text-xs bg-white border border-slate-200 rounded-lg text-slate-700 font-medium"
+                  className="px-2 py-1 text-base sm:text-xs bg-white border border-slate-200 rounded-lg text-slate-700 font-medium max-w-[125px] sm:max-w-none"
                 />
               </div>
               {(fromDate || toDate) && (
@@ -190,7 +190,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                     setFromDate('');
                     setToDate('');
                   }}
-                  className="text-[11px] font-bold text-rose-600 hover:text-rose-800 px-1.5 cursor-pointer"
+                  className="text-[11px] font-bold text-rose-600 hover:text-rose-800 px-1 cursor-pointer"
                 >
                   Clear
                 </button>
@@ -200,7 +200,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
             {/* Add Project CTA */}
             <button
               onClick={handleOpenAdd}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs shadow-sm shadow-indigo-600/30 transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs shadow-sm shadow-indigo-600/30 transition-all cursor-pointer shrink-0"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>New Project</span>
@@ -209,13 +209,13 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         </div>
 
         {/* Aggregate Rollup Summary Banner */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-100">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 mt-4 pt-4 border-t border-slate-100">
           <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
-            <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
               <ArrowDownRight className="w-4 h-4 stroke-[2.5]" />
             </div>
             <div>
-              <span className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider block">
+              <span className="text-[10px] sm:text-[11px] text-slate-500 font-semibold uppercase tracking-wider block">
                 Total Projects Inflow
               </span>
               <span className="text-sm font-bold text-emerald-700">
@@ -225,11 +225,11 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
           </div>
 
           <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
-            <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
               <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
             </div>
             <div>
-              <span className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider block">
+              <span className="text-[10px] sm:text-[11px] text-slate-500 font-semibold uppercase tracking-wider block">
                 Total Projects Outflow
               </span>
               <span className="text-sm font-bold text-rose-700">
@@ -240,7 +240,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
 
           <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
             <div
-              className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+              className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
                 aggregate.balance >= 0
                   ? 'bg-emerald-100 text-emerald-700'
                   : 'bg-rose-100 text-rose-700'
@@ -253,7 +253,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
               )}
             </div>
             <div>
-              <span className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider block">
+              <span className="text-[10px] sm:text-[11px] text-slate-500 font-semibold uppercase tracking-wider block">
                 Combined Net Balance
               </span>
               <span
@@ -269,7 +269,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       </div>
 
       {/* Project Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {calculatedProjects.map((p) => {
           return (
             <div

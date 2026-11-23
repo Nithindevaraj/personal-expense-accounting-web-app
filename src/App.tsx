@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Plus } from 'lucide-react';
 import type { Project, Transaction, TransactionType } from './types';
 import {
   type UserProfile,
@@ -238,7 +239,7 @@ export const App: React.FC = () => {
       />
 
       {/* Main Content Area */}
-      <main className="grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-12">
+      <main className="grow max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-24 sm:pb-12">
         {activeTab === 'dashboard' && (
           <DashboardView
             transactions={transactions}
@@ -314,11 +315,23 @@ export const App: React.FC = () => {
         )}
       </main>
 
+      {/* Mobile Floating Action Button (FAB) */}
+      <button
+        onClick={() => {
+          setEditingTransaction(null);
+          setIsTxModalOpen(true);
+        }}
+        className="sm:hidden fixed bottom-18 right-4 z-30 w-13 h-13 rounded-full bg-emerald-600 hover:bg-emerald-700 active:scale-90 text-white flex items-center justify-center shadow-xl shadow-emerald-600/40 border-2 border-white transition-all cursor-pointer"
+        aria-label="Add Transaction"
+      >
+        <Plus className="w-6 h-6 stroke-[2.5]" />
+      </button>
+
       {/* Footer */}
-      <footer className="border-t border-slate-200/80 bg-white py-4 mt-auto text-center text-xs text-slate-400">
+      <footer className="border-t border-slate-200/80 bg-white py-4 mt-auto text-center text-xs text-slate-400 mb-16 sm:mb-0">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>Personal Accounting & Cost Center Engine</span>
-          <span className="flex items-center gap-1 font-mono text-[11px] text-slate-500">
+          <span className="hidden sm:flex items-center gap-1 font-mono text-[11px] text-slate-500">
             Press <kbd className="px-1.5 py-0.5 rounded-md bg-slate-100 border border-slate-300 font-bold">N</kbd> anytime to log an entry
           </span>
           <span>100% Offline & Private Local Storage</span>
