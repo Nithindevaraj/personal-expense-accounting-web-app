@@ -2,14 +2,34 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="alternate icon" type="image/png" href="./icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <link rel="manifest" href="./manifest.json" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#059669" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Accounts" />
+    <meta name="application-name" content="Personal Accounting" />
+    <meta name="msapplication-TileColor" content="#059669" />
     <title>Personal Accounting & Expense Manager</title>
     <meta name="description" content="Personal accounting and project expense management web app" />
+    <script>
+      // Immediately intercept beforeinstallprompt before modules finish loading
+      window.__pwa_prompt = null;
+      window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        window.__pwa_prompt = e;
+        window.dispatchEvent(new CustomEvent('pwa-prompt-ready'));
+        console.log('[PWA] beforeinstallprompt captured successfully.');
+      });
+      window.addEventListener('appinstalled', function() {
+        window.__pwa_prompt = null;
+        console.log('[PWA] Application successfully installed.');
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>

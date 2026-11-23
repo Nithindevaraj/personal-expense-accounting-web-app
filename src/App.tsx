@@ -23,10 +23,26 @@ import { SettingsView } from './components/SettingsView';
 import { TransactionModal } from './components/TransactionModal';
 import { AttachmentViewerModal } from './components/AttachmentViewerModal';
 import { ProfileModal } from './components/ProfileModal';
+import { InstallModal } from './components/InstallModal';
+import { InstallBanner } from './components/InstallBanner';
 
 export const App: React.FC = () => {
   // Global State
-  const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
+  const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab');
+      if (
+        tab &&
+        ['dashboard', 'transactions', 'projects', 'analytics', 'settings'].includes(tab)
+      ) {
+        return tab as ActiveTab;
+      }
+    } catch {
+      // ignore
+    }
+    return 'dashboard';
+  });
   const [transactions, setTransactions] = useState<Transaction[]>(getStoredTransactions);
   const [projects, setProjects] = useState<Project[]>(getStoredProjects);
   const [incomeCategories, setIncomeCategories] = useState<string[]>(getStoredIncomeCategories);
@@ -34,8 +50,16 @@ export const App: React.FC = () => {
   const [userProfile, setUserProfile] = useState<UserProfile>(getUserProfile);
 
   // Modals
-  const [isTxModalOpen, setIsTxModalOpen] = useState(false);
+  const [isTxModalOpen, setIsTxModalOpen] = useState<boolean>(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('action') === 'new-tx';
+    } catch {
+      return false;
+    }
+  });
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [txLedgerFilter, setTxLedgerFilter] = useState<{
     tag?: string;
@@ -236,6 +260,7 @@ export const App: React.FC = () => {
         projectCount={projects.length}
         userProfile={userProfile}
         onOpenProfile={() => setIsProfileModalOpen(true)}
+        onOpenInstallModal={() => setIsInstallModalOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -311,6 +336,7 @@ export const App: React.FC = () => {
             }}
             onImportTransactions={handleImportTransactions}
             onClearAllData={handleClearAllData}
+            onOpenInstallModal={() => setIsInstallModalOpen(true)}
           />
         )}
       </main>
@@ -370,6 +396,15 @@ export const App: React.FC = () => {
           setUserProfile(updatedProfile);
           saveUserProfile(updatedProfile);
         }}
+      />
+
+      {/* PWA Floating Install Prompt Banner */}
+      <InstallBanner onOpenModal={() => setIsInstallModalOpen(true)} />
+
+      {/* PWA Install Guide & Native Prompt Modal */}
+      <InstallModal
+        isOpen={isInstallModalOpen}
+        onClose={() => setIsInstallModalOpen(false)}
       />
     </div>
   );

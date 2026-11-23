@@ -10,6 +10,7 @@ import {
   TrendingUp,
   TrendingDown,
   User,
+  Download,
 } from 'lucide-react';
 import { formatINR } from '../utils/formatters';
 import type { UserProfile } from '../utils/storage';
@@ -27,6 +28,7 @@ interface NavbarProps {
   projectCount: number;
   userProfile: UserProfile;
   onOpenProfile: () => void;
+  onOpenInstallModal?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -38,6 +40,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   projectCount,
   userProfile,
   onOpenProfile,
+  onOpenInstallModal,
 }) => {
   return (
     <>
@@ -106,6 +109,29 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </span>
                 </div>
               </div>
+
+              {/* Install App Button */}
+              {onOpenInstallModal && (
+                <>
+                  <button
+                    type="button"
+                    onClick={onOpenInstallModal}
+                    className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 font-medium text-xs sm:text-sm transition-all cursor-pointer shrink-0 shadow-2xs"
+                    title="Install Personal Accounting as Web App"
+                  >
+                    <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-700" />
+                    <span>Install App</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onOpenInstallModal}
+                    className="flex sm:hidden items-center justify-center p-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 transition-all cursor-pointer shrink-0"
+                    title="Install Web App"
+                  >
+                    <Download className="w-4 h-4 text-emerald-700" />
+                  </button>
+                </>
+              )}
 
               <button
                 onClick={onOpenNewTransaction}
