@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Camera, Trash2, User, Check, Mail, Globe } from 'lucide-react';
+import { X, Camera, Trash2, User, Check, Mail, Globe, ShieldCheck, LogOut } from 'lucide-react';
 import type { UserProfile } from '../utils/storage';
+import { useAuth } from '../context/AuthContext';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   userProfile,
   onSaveProfile,
 }) => {
+  const { user, signOut } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState(userProfile.name);
@@ -24,12 +26,16 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      setName(userProfile.name);
-      setEmail(userProfile.email || '');
+      const googleName = user?.user_metadata?.full_name;
+      const googleEmail = user?.email;
+      const googleAvatar = user?.user_metadata?.avatar_url;
+
+      setName(googleName || userProfile.name);
+      setEmail(googleEmail || userProfile.email || '');
       setCurrency(userProfile.currency || 'INR');
-      setAvatar(userProfile.avatar);
+      setAvatar(googleAvatar || userProfile.avatar);
     }
-  }, [isOpen, userProfile]);
+  }, [isOpen, userProfile, user]);
 
   if (!isOpen) return null;
 
@@ -205,6 +211,31 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               </select>
             </div>
           </div>
+
+          {/* Google Account Status Badge */}
+          {user && (
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2 text-slate-700 min-w-0">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span className="truncate">
+                  Linked to Google: <strong className="font-semibold text-slate-900">{user.email}</strong>
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm('Sign out of Google and Personal Accounting?')) {
+                    signOut();
+                    onClose();
+                  }
+                }}
+                className="text-rose-600 hover:text-rose-700 font-semibold flex items-center gap-1 shrink-0 cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          )}
 
           {/* Modal Actions */}
           <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 pb-3 sm:pb-0">

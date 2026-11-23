@@ -11,6 +11,10 @@ import {
   Camera,
   Smartphone,
   RefreshCw,
+  ShieldCheck,
+  LogOut,
+  LogIn,
+  KeyRound,
 } from 'lucide-react';
 import { usePWAInstall } from '../utils/pwa';
 import type { Project, Transaction } from '../types';
@@ -21,6 +25,7 @@ import {
   saveUserProfile,
 } from '../utils/storage';
 import { parseCSVToTransactions, transactionsToCSV } from '../utils/formatters';
+import { useAuth } from '../context/AuthContext';
 
 interface SettingsViewProps {
   transactions: Transaction[];
@@ -49,6 +54,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onClearAllData,
   onOpenInstallModal,
 }) => {
+  const { user, signOut, signInWithGoogle, isConfigured } = useAuth();
   const { isInstalled } = usePWAInstall();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
@@ -244,6 +250,83 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
           Manage backups, import/export CSV to Google Sheets, and customize transaction categories
         </p>
+      </div>
+
+      {/* Cloud Database & Security Status */}
+      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-200">
+              <Database className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+                <span>Supabase & Google Authentication</span>
+                {isConfigured ? (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    Live
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                    Keys Pending
+                  </span>
+                )}
+              </h2>
+              <p className="text-xs text-slate-500">
+                PostgreSQL Database with Row-Level Security (RLS) partition isolation
+              </p>
+            </div>
+          </div>
+
+          <div>
+            {user ? (
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm(`Sign out of Google (${user.email})?`)) {
+                    signOut();
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-rose-50 hover:border-rose-200 text-slate-600 hover:text-rose-600 text-xs font-semibold transition cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Sign Out ({user.email})</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={signInWithGoogle}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition cursor-pointer shadow-xs"
+              >
+                <LogIn className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Sign In with Google</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <span className="text-slate-500 block font-medium">Google OAuth Identity</span>
+            <span className="font-semibold text-slate-900 truncate block mt-0.5">
+              {user ? user.email : 'Unauthenticated (Offline Demo)'}
+            </span>
+          </div>
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <span className="text-slate-500 block font-medium">Row-Level Security (RLS)</span>
+            <span className="font-semibold text-emerald-700 flex items-center gap-1 mt-0.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span>{user ? 'Enforced (auth.uid)' : 'Active on Login'}</span>
+            </span>
+          </div>
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <span className="text-slate-500 block font-medium">Database Host</span>
+            <span className="font-semibold text-slate-800 flex items-center gap-1 mt-0.5">
+              <KeyRound className="w-3.5 h-3.5 text-slate-500" />
+              <span className="truncate">{isConfigured ? 'Supabase Managed PG' : 'Local Storage Fallback'}</span>
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Import / Export Card */}

@@ -12,6 +12,7 @@
     "deploy": "gh-pages -d dist --dotfiles --nojekyll"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.119.2",
     "@tailwindcss/vite": "^4.3.5",
     "canvas-confetti": "^1.9.4",
     "lucide-react": "^1.78.0",

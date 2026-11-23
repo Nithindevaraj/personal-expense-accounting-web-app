@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Loader2 } from 'lucide-react';
 import type { Project, Transaction, TransactionType } from './types';
 import {
   type UserProfile,
@@ -25,8 +25,20 @@ import { AttachmentViewerModal } from './components/AttachmentViewerModal';
 import { ProfileModal } from './components/ProfileModal';
 import { InstallModal } from './components/InstallModal';
 import { InstallBanner } from './components/InstallBanner';
+import { useAuth } from './context/AuthContext';
+import { LoginView } from './components/LoginView';
+import {
+  getExpenses,
+  addExpense,
+  updateExpense,
+  deleteExpense,
+  batchDeleteExpenses,
+} from './services/expenseService';
 
 export const App: React.FC = () => {
+  const { user, isLoading: isAuthLoading, offlineDemoMode } = useAuth();
+  const [isDataLoading, setIsDataLoading] = useState(false);
+
   // Global State
   const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
     try {
@@ -115,14 +127,39 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isTxModalOpen]);
 
-  // Transaction Handlers
-  const handleSaveTransaction = (
+  // Fetch user expenses from Supabase when authenticated
+  useEffect(() => {
+    if (user) {
+      setIsDataLoading(true);
+      getExpenses()
+        .then((fetched) => {
+          setTransactions(fetched);
+        })
+        .catch((err) => {
+          console.error('Error fetching expenses from Supabase:', err);
+        })
+        .finally(() => {
+          setIsDataLoading(false);
+        });
+
+      // Synchronize user profile display with Google metadata
+      setUserProfile((prev) => ({
+        ...prev,
+        name: user.user_metadata?.full_name || prev.name,
+        email: user.email || prev.email,
+        avatar: user.user_metadata?.avatar_url || prev.avatar,
+      }));
+    }
+  }, [user]);
+
+  // Transaction Handlers (Optimistic UI + Background Supabase Sync)
+  const handleSaveTransaction = async (
     txData: Omit<Transaction, 'id' | 'createdAt'>,
     editingId?: string
   ) => {
-    let updated: Transaction[];
     if (editingId) {
-      updated = transactions.map((t) =>
+      // 1. Optimistic UI update
+      const updated = transactions.map((t) =>
         t.id === editingId
           ? {
               ...t,
@@ -130,43 +167,75 @@ export const App: React.FC = () => {
             }
           : t
       );
+      setTransactions(updated);
+      saveStoredTransactions(updated);
+
+      // 2. Persist to Supabase
+      try {
+        await updateExpense(editingId, txData);
+      } catch (err) {
+        console.error('Error updating expense in Supabase:', err);
+      }
     } else {
-      const newTx: Transaction = {
+      // 1. Optimistic UI insert with temporary ID
+      const tempId = `tx-temp-${Date.now()}`;
+      const tempTx: Transaction = {
         ...txData,
-        id: `tx-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        id: tempId,
         createdAt: Date.now(),
       };
-      updated = [newTx, ...transactions];
-    }
+      const updated = [tempTx, ...transactions];
+      setTransactions(updated);
+      saveStoredTransactions(updated);
 
-    setTransactions(updated);
-    saveStoredTransactions(updated);
+      // 2. Persist to Supabase and replace tempId with persistent UUID
+      try {
+        const savedTx = await addExpense(txData);
+        setTransactions((prev) =>
+          prev.map((t) => (t.id === tempId ? savedTx : t))
+        );
+      } catch (err) {
+        console.error('Error adding expense to Supabase:', err);
+      }
+    }
   };
 
-  const handleDeleteTransaction = (id: string) => {
+  const handleDeleteTransaction = async (id: string) => {
+    // 1. Optimistic UI update
     const updated = transactions.filter((t) => t.id !== id);
     setTransactions(updated);
     saveStoredTransactions(updated);
+
+    // 2. Persist to Supabase
+    try {
+      await deleteExpense(id);
+    } catch (err) {
+      console.error('Error deleting expense from Supabase:', err);
+    }
   };
 
-  const handleBatchDeleteTransactions = (ids: string[]) => {
+  const handleBatchDeleteTransactions = async (ids: string[]) => {
+    // 1. Optimistic UI update
     const idSet = new Set(ids);
     const updated = transactions.filter((t) => !idSet.has(t.id));
     setTransactions(updated);
     saveStoredTransactions(updated);
+
+    // 2. Persist to Supabase
+    try {
+      await batchDeleteExpenses(ids);
+    } catch (err) {
+      console.error('Error batch deleting expenses from Supabase:', err);
+    }
   };
 
-  const handleDuplicateTransaction = (t: Transaction) => {
-    const duplicated: Transaction = {
+  const handleDuplicateTransaction = async (t: Transaction) => {
+    const dupTx: Omit<Transaction, 'id' | 'createdAt'> = {
       ...t,
-      id: `tx-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       slNo: nextSlNo,
       description: `${t.description} (Copy)`,
-      createdAt: Date.now(),
     };
-    const updated = [duplicated, ...transactions];
-    setTransactions(updated);
-    saveStoredTransactions(updated);
+    await handleSaveTransaction(dupTx);
   };
 
   // Project Handlers
@@ -243,6 +312,21 @@ export const App: React.FC = () => {
     saveStoredTransactions([]);
   };
 
+  // Auth Gate: Loading State
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white space-y-4">
+        <Loader2 className="w-10 h-10 animate-spin text-emerald-400" />
+        <p className="text-sm font-medium text-slate-300">Connecting to your private vault...</p>
+      </div>
+    );
+  }
+
+  // Auth Gate: Require 1-Click Google Login unless continuing in Offline Demo Mode
+  if (!user && !offlineDemoMode) {
+    return <LoginView />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col antialiased">
       {/* Sticky Global Navigation */}
@@ -262,6 +346,14 @@ export const App: React.FC = () => {
         onOpenProfile={() => setIsProfileModalOpen(true)}
         onOpenInstallModal={() => setIsInstallModalOpen(true)}
       />
+
+      {/* Cloud Sync Status Banner */}
+      {isDataLoading && (
+        <div className="bg-emerald-50 border-b border-emerald-200 py-1.5 px-4 text-center text-xs text-emerald-800 flex items-center justify-center gap-2">
+          <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+          <span>Syncing with your private Supabase vault...</span>
+        </div>
+      )}
 
       {/* Main Content Area */}
       <main className="grow max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-24 sm:pb-12">
