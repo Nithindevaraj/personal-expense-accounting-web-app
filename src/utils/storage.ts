@@ -21,12 +21,12 @@ export interface UserProfile {
 }
 
 export const DEFAULT_USER_PROFILE: UserProfile = {
-  name: 'Kishore',
+  name: 'Personal',
   currency: 'INR',
-  email: 'nitindeva.rg@gmail.com',
+  email: 'user@example.com',
 };
 
-// Seed realistic sample transactions mirroring Kishore's personal accounting
+// Seed realistic sample transactions mirroring personal accounting
 export const SAMPLE_TRANSACTIONS: Transaction[] = [
   {
     id: 'tx-seed-1',

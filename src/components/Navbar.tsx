@@ -51,9 +51,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                   INR ₹
                 </span>
               </div>
-              <p className="text-xs text-slate-500 font-medium">
-                Kishore’s Ledger & Project Cost-Center
-              </p>
             </div>
           </div>
 

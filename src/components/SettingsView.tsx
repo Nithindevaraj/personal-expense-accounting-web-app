@@ -435,7 +435,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <button
               type="button"
               onClick={() => {
-                if (window.confirm('Reset all transactions and projects to Kishore’s demo data?')) {
+                if (window.confirm('Reset all transactions and projects to demo data?')) {
                   onResetAllData();
                   showNotification('Reset to demo accounting dataset');
                 }

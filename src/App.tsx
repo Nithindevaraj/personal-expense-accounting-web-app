@@ -324,7 +324,7 @@ export const App: React.FC = () => {
       {/* Footer */}
       <footer className="border-t border-slate-200/80 bg-white py-4 mt-auto text-center text-xs text-slate-400">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>Personal Accounting & Cost Center Engine (Kishore)</span>
+          <span>Personal Accounting & Cost Center Engine</span>
           <span className="flex items-center gap-1 font-mono text-[11px] text-slate-500">
             Press <kbd className="px-1.5 py-0.5 rounded-md bg-slate-100 border border-slate-300 font-bold">N</kbd> anytime to log an entry
           </span>
