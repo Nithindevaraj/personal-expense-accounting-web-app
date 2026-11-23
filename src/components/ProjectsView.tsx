@@ -389,22 +389,19 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
           <div className="flex items-center gap-2">
             <Layers className="w-4 h-4 text-slate-600" />
             <h2 className="text-sm font-bold text-slate-900">
-              Project Ledger Matrix (Google Sheet Projects Grid)
+              Project Ledger Matrix
             </h2>
           </div>
-          <span className="text-xs text-slate-500 font-mono">
-            SUMIFS(Transactions!$E$2:$E, Transactions!$F$2:$F, $A...)
-          </span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-100/70 text-slate-600 uppercase font-semibold text-[11px] border-b border-slate-200">
-                <th className="p-3">Project Tags (Col A)</th>
-                <th className="p-3 text-right">Total Income (Col B)</th>
-                <th className="p-3 text-right">Total Expense (Col C)</th>
-                <th className="p-3 text-right">Balance (Col D = B - C)</th>
+                <th className="p-3">Project Tag</th>
+                <th className="p-3 text-right">Total Income</th>
+                <th className="p-3 text-right">Total Expense</th>
+                <th className="p-3 text-right">Balance</th>
                 <th className="p-3 text-center">Net Margin</th>
                 <th className="p-3 text-center">Actions</th>
               </tr>
