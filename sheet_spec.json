@@ -1,0 +1,546 @@
+{
+  "title": "Personal accounting (Kishore)",
+  "locale": "en_GB",
+  "timeZone": "Asia/Calcutta",
+  "sheets": [
+    {
+      "title": "Dashboard",
+      "sheetId": 561251026,
+      "sheetType": "OBJECT",
+      "headers": [],
+      "sample_rows": [],
+      "conditional_formatting": []
+    },
+    {
+      "title": "Projects",
+      "sheetId": 1010415607,
+      "sheetType": "GRID",
+      "headers": [],
+      "sample_rows": [
+        [
+          "Date Range",
+          "From",
+          "To"
+        ],
+        [
+          "Project Tags",
+          "Total Income",
+          "Total Expense",
+          "Balance"
+        ],
+        [
+          "Project Alpha",
+          "\u20b90.00",
+          "\u20b90.00",
+          "\u20b90.00"
+        ],
+        [
+          "Project Beta",
+          "\u20b90.00",
+          "\u20b90.00",
+          "\u20b90.00"
+        ],
+        [
+          "Project Gamma",
+          "\u20b90.00",
+          "\u20b90.00",
+          "\u20b90.00"
+        ],
+        [
+          null,
+          {
+            "formulaValue": "=IF($A7=\"\", \"\", SUMIFS(Transactions!$E$2:$E, Transactions!$F$2:$F, $A7, Transactions!$C$2:$C, \"Income\", Transactions!$B$2:$B, \">=\" & IF($B$2<>\"\", $B$2, 0), Transactions!$B$2:$B, \"<=\" & IF($C$2<>\"\", $C$2, 100000)))"
+          },
+          {
+            "formulaValue": "=IF($A7=\"\", \"\", ABS(SUMIFS(Transactions!$E$2:$E, Transactions!$F$2:$F, $A7, Transactions!$C$2:$C, \"Expense\", Transactions!$B$2:$B, \">=\" & IF($B$2<>\"\", $B$2, 0), Transactions!$B$2:$B, \"<=\" & IF($C$2<>\"\", $C$2, 100000))))"
+          },
+          {
+            "formulaValue": "=IF($A7=\"\", \"\", B7 - C7)"
+          }
+        ],
+        [
+          null,
+          {
+            "formulaValue": "=IF($A8=\"\", \"\", SUMIFS(Transactions!$E$2:$E, Transactions!$F$2:$F, $A8, Transactions!$C$2:$C, \"Income\", Transactions!$B$2:$B, \">=\" & IF($B$2<>\"\", $B$2, 0), Transactions!$B$2:$B, \"<=\" & IF($C$2<>\"\", $C$2, 100000)))"
+          },
+          {
+            "formulaValue": "=IF($A8=\"\", \"\", ABS(SUMIFS(Transactions!$E$2:$E, Transactions!$F$2:$F, $A8, Transactions!$C$2:$C, \"Expense\", Transactions!$B$2:$B, \">=\" & IF($B$2<>\"\", $B$2, 0), Transactions!$B$2:$B, \"<=\" & IF($C$2<>\"\", $C$2, 100000))))"
+          },
+          {
+            "formulaValue": "=IF($A8=\"\", \"\", B8 - C8)"
+          }
+        ],
+        [
+          null,
+          {
+            "formulaValue": "=IF($A9=\"\", \"\", SUMIFS(Transactions!$E$2:$E, Transactions!$F$2:$F, $A9, Transactions!$C$2:$C, \"Income\", Transactions!$B$2:$B, \">=\" & IF($B$2<>\"\", $B$2, 0), Transactions!$B$2:$B, \"<=\" & IF($C$2<>\"\", $C$2, 100000)))"
+          },
+          {
+            "formulaValue": "=IF($A9=\"\", \"\", ABS(SUMIFS(Transactions!$E$2:$E, Transactions!$F$2:$F, $A9, Transactions!$C$2:$C, \"Expense\", Transactions!$B$2:$B, \">=\" & IF($B$2<>\"\", $B$2, 0), Transactions!$B$2:$B, \"<=\" & IF($C$2<>\"\", $C$2, 100000))))"
+          },
+          {
+            "formulaValue": "=IF($A9=\"\", \"\", B9 - C9)"
+          }
+        ],
+        [
+          null,
+          {
+            "formulaValue": "=IF($A10=\"\", \"\", SUMIFS(Transactions!$E$2:$E, Transactions!$F$2:$F, $A10, Transactions!$C$2:$C, \"Income\", Transactions!$B$2:$B, \">=\" & IF($B$2<>\"\", $B$2, 0), Transactions!$B$2:$B, \"<=\" & IF($C$2<>\"\", $C$2, 100000)))"
+          },
+          {
+            "formulaValue": "=IF($A10=\"\", \"\", ABS(SUMIFS(Transactions!$E$2:$E, Transactions!$F$2:$F, $A10, Transactions!$C$2:$C, \"Expense\", Transactions!$B$2:$B, \">=\" & IF($B$2<>\"\", $B$2, 0), Transactions!$B$2:$B, \"<=\" & IF($C$2<>\"\", $C$2, 100000))))"
+          },
+          {
+            "formulaValue": "=IF($A10=\"\", \"\", B10 - C10)"
+          }
+        ]
+      ],
+      "conditional_formatting": [
+        {
+          "ranges": [
+            {
+              "sheetId": 1010415607,
+              "startRowIndex": 1,
+              "endRowIndex": 2,
+              "startColumnIndex": 1,
+              "endColumnIndex": 3
+            }
+          ],
+          "booleanRule": {
+            "condition": {
+              "type": "CUSTOM_FORMULA",
+              "values": [
+                {
+                  "userEnteredValue": "=$C2=\"Income\""
+                }
+              ]
+            },
+            "format": {
+              "backgroundColor": {
+                "red": 0.8509804,
+                "green": 0.9411765,
+                "blue": 0.8509804
+              },
+              "backgroundColorStyle": {
+                "rgbColor": {
+                  "red": 0.8509804,
+                  "green": 0.9411765,
+                  "blue": 0.8509804
+                }
+              }
+            }
+          }
+        },
+        {
+          "ranges": [
+            {
+              "sheetId": 1010415607,
+              "startRowIndex": 1,
+              "endRowIndex": 2,
+              "startColumnIndex": 1,
+              "endColumnIndex": 3
+            }
+          ],
+          "booleanRule": {
+            "condition": {
+              "type": "CUSTOM_FORMULA",
+              "values": [
+                {
+                  "userEnteredValue": "=$C2=\"Expense\""
+                }
+              ]
+            },
+            "format": {
+              "backgroundColor": {
+                "red": 0.95686275,
+                "green": 0.8,
+                "blue": 0.8
+              },
+              "backgroundColorStyle": {
+                "rgbColor": {
+                  "red": 0.95686275,
+                  "green": 0.8,
+                  "blue": 0.8
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "title": "Transactions",
+      "sheetId": 0,
+      "sheetType": "GRID",
+      "headers": [],
+      "sample_rows": [
+        [
+          "Sl.No",
+          "Date",
+          "income/\nexpense",
+          "type of \nincome/\nexpense",
+          "Amount",
+          "Tags",
+          "Description\nor Remarks",
+          "Attachments",
+          "Notes",
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          "1",
+          null,
+          "Income",
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          {
+            "formulaValue": "=IF(COUNTA(B3:I3)>0, MAX($A$1:A2)+1, \"\")"
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          {
+            "formulaValue": "=IF(COUNTA(B4:I4)>0, MAX($A$1:A3)+1, \"\")"
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          {
+            "formulaValue": "=IF(COUNTA(B5:I5)>0, MAX($A$1:A4)+1, \"\")"
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          {
+            "formulaValue": "=IF(COUNTA(B6:I6)>0, MAX($A$1:A5)+1, \"\")"
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          {
+            "formulaValue": "=IF(COUNTA(B7:I7)>0, MAX($A$1:A6)+1, \"\")"
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          {
+            "formulaValue": "=IF(COUNTA(B8:I8)>0, MAX($A$1:A7)+1, \"\")"
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          {
+            "formulaValue": "=IF(COUNTA(B9:I9)>0, MAX($A$1:A8)+1, \"\")"
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          {
+            "formulaValue": "=IF(COUNTA(B10:I10)>0, MAX($A$1:A9)+1, \"\")"
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      ],
+      "conditional_formatting": [
+        {
+          "ranges": [
+            {
+              "startRowIndex": 1,
+              "endRowIndex": 1996,
+              "startColumnIndex": 0,
+              "endColumnIndex": 9
+            }
+          ],
+          "booleanRule": {
+            "condition": {
+              "type": "CUSTOM_FORMULA",
+              "values": [
+                {
+                  "userEnteredValue": "=$C2=\"Income\""
+                }
+              ]
+            },
+            "format": {
+              "backgroundColor": {
+                "red": 0.8509804,
+                "green": 0.9411765,
+                "blue": 0.8509804
+              },
+              "backgroundColorStyle": {
+                "rgbColor": {
+                  "red": 0.8509804,
+                  "green": 0.9411765,
+                  "blue": 0.8509804
+                }
+              }
+            }
+          }
+        },
+        {
+          "ranges": [
+            {
+              "startRowIndex": 1,
+              "endRowIndex": 1996,
+              "startColumnIndex": 0,
+              "endColumnIndex": 9
+            }
+          ],
+          "booleanRule": {
+            "condition": {
+              "type": "CUSTOM_FORMULA",
+              "values": [
+                {
+                  "userEnteredValue": "=$C2=\"Expense\""
+                }
+              ]
+            },
+            "format": {
+              "backgroundColor": {
+                "red": 0.95686275,
+                "green": 0.8,
+                "blue": 0.8
+              },
+              "backgroundColorStyle": {
+                "rgbColor": {
+                  "red": 0.95686275,
+                  "green": 0.8,
+                  "blue": 0.8
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,103 @@
+export type TransactionType = 'Income' | 'Expense';
+
+export interface Transaction {
+  id: string;
+  slNo: number;
+  date: string; // YYYY-MM-DD
+  type: TransactionType;
+  category: string;
+  amount: number;
+  tag: string; // Project Tag (e.g. Project Alpha, Beta, etc.)
+  description: string;
+  attachments?: string[]; // Data URLs or filenames
+  notes?: string;
+  createdAt: number;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  budget?: number;
+  color?: string;
+  createdAt: number;
+}
+
+export interface DateFilterRange {
+  from: string; // YYYY-MM-DD or empty
+  to: string;   // YYYY-MM-DD or empty
+}
+
+// 15 exact Income types from the Google Sheet
+export const DEFAULT_INCOME_CATEGORIES: string[] = [
+  'Monthly salary',
+  'wages',
+  'freelance payouts',
+  'business profits',
+  'Pocket money',
+  'monthly allowances',
+  'financial support from family',
+  'financial support from friends',
+  'gains',
+  'tax refunds',
+  'gifts',
+  'money earned from selling used items',
+  'Advances',
+  'Receiving Back',
+  'income self-transfer',
+];
+
+// Curated standard Expense categories
+export const DEFAULT_EXPENSE_CATEGORIES: string[] = [
+  'Food & Dining',
+  'Housing & Rent',
+  'Groceries',
+  'Transportation & Fuel',
+  'Utilities & Bills',
+  'Shopping & Lifestyle',
+  'Entertainment & Leisure',
+  'Health & Medical',
+  'Education & Learning',
+  'Travel & Outings',
+  'Investments & Savings',
+  'EMI & Loans',
+  'Personal Care',
+  'Gifts & Donations',
+  'Miscellaneous',
+];
+
+// Default Project Tags from the Google Sheet
+export const DEFAULT_PROJECTS: Project[] = [
+  {
+    id: 'proj-alpha',
+    name: 'Project Alpha',
+    description: 'Primary software engineering project & client deliverables',
+    budget: 150000,
+    color: '#3b82f6', // blue
+    createdAt: Date.now() - 30 * 86400000,
+  },
+  {
+    id: 'proj-beta',
+    name: 'Project Beta',
+    description: 'Hardware prototype research & development',
+    budget: 75000,
+    color: '#10b981', // emerald
+    createdAt: Date.now() - 20 * 86400000,
+  },
+  {
+    id: 'proj-gamma',
+    name: 'Project Gamma',
+    description: 'Personal media studio & content creation',
+    budget: 50000,
+    color: '#8b5cf6', // purple
+    createdAt: Date.now() - 10 * 86400000,
+  },
+  {
+    id: 'proj-personal',
+    name: 'Personal',
+    description: 'General household and individual living expenses',
+    budget: 40000,
+    color: '#f59e0b', // amber
+    createdAt: Date.now() - 60 * 86400000,
+  },
+];
