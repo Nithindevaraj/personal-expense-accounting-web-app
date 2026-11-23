@@ -459,11 +459,11 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         </div>
       </div>
 
-      {/* Add / Edit Project Modal */}
+      {/* Add / Edit Project Modal (Optimized for Mobile Bottom Sheet or Centered Dialog) */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full p-6 animate-fade-in">
-            <h3 className="text-lg font-bold text-slate-900 mb-1">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-white rounded-t-3xl sm:rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-5 sm:p-6 animate-fade-in max-h-[92dvh] overflow-y-auto">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-1">
               {editingProject ? 'Edit Project Tag' : 'Create New Project Tag'}
             </h3>
             <p className="text-xs text-slate-500 mb-4">
@@ -481,7 +481,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Project Delta, Marketing, etc."
-                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-medium"
+                  className="w-full px-3 py-2.5 text-base sm:text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-medium"
                 />
               </div>
 
@@ -494,7 +494,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Purpose or deliverable details"
-                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-medium"
+                  className="w-full px-3 py-2.5 text-base sm:text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-medium"
                 />
               </div>
 
@@ -509,7 +509,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                   value={budget}
                   onChange={(e) => setBudget(e.target.value)}
                   placeholder="e.g. 50000"
-                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-medium"
+                  className="w-full px-3 py-2.5 text-base sm:text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-medium"
                 />
               </div>
 
@@ -517,7 +517,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Badge Color
                 </label>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5 flex-wrap">
                   {[
                     '#3b82f6',
                     '#10b981',
@@ -531,26 +531,27 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                       key={c}
                       type="button"
                       onClick={() => setColor(c)}
-                      className={`w-6 h-6 rounded-full transition-transform cursor-pointer ${
+                      className={`w-7 h-7 sm:w-6 sm:h-6 rounded-full transition-transform cursor-pointer ${
                         color === c ? 'scale-125 ring-2 ring-indigo-500 ring-offset-2' : ''
                       }`}
                       style={{ backgroundColor: c }}
+                      aria-label={`Select color ${c}`}
                     />
                   ))}
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 pb-2 sm:pb-0">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs cursor-pointer"
                 >
                   {editingProject ? 'Save Changes' : 'Create Project'}
                 </button>

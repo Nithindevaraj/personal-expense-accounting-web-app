@@ -221,54 +221,54 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-12 animate-fade-in max-w-5xl mx-auto">
+    <div className="space-y-4 sm:space-y-6 pb-12 animate-fade-in max-w-5xl mx-auto">
       {/* Toast Notification */}
       {notification && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2 text-xs font-semibold animate-fade-in">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+        <div className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2 text-xs font-semibold animate-fade-in max-w-[90vw]">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
           <span>{notification}</span>
         </div>
       )}
 
       {/* Header */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-        <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
+        <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
           Data Management & Configuration
         </h1>
-        <p className="text-sm text-slate-500">
+        <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
           Manage backups, import/export CSV to Google Sheets, and customize transaction categories
         </p>
       </div>
 
       {/* Import / Export Card */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3 sm:space-y-4">
         <div className="flex items-center gap-2">
-          <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
-          <h2 className="text-base font-bold text-slate-900">
+          <FileSpreadsheet className="w-5 h-5 text-emerald-600 shrink-0" />
+          <h2 className="text-sm sm:text-base font-bold text-slate-900">
             Google Sheets Interoperability & Backup
           </h2>
         </div>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-500 leading-relaxed">
           The CSV exporter generates identical columns as your original Google Sheet (`Sl.No`, `Date`, `income/expense`, `type of income/expense`, `Amount`, `Tags`, `Description or Remarks`, `Attachments`, `Notes`).
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 pt-1">
           {/* Export CSV */}
           <button
             onClick={handleExportCSV}
-            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold transition-all cursor-pointer"
+            className="flex items-center justify-center gap-1.5 px-3 py-2.5 sm:py-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold transition-all cursor-pointer"
           >
-            <Download className="w-4 h-4" />
-            <span>Export to CSV</span>
+            <Download className="w-4 h-4 shrink-0" />
+            <span className="truncate">Export CSV</span>
           </button>
 
           {/* Import CSV */}
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 text-xs font-bold transition-all cursor-pointer"
+            className="flex items-center justify-center gap-1.5 px-3 py-2.5 sm:py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 text-xs font-bold transition-all cursor-pointer"
           >
-            <Upload className="w-4 h-4" />
-            <span>Import from CSV</span>
+            <Upload className="w-4 h-4 shrink-0" />
+            <span className="truncate">Import CSV</span>
           </button>
           <input
             type="file"
@@ -281,19 +281,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           {/* Backup JSON */}
           <button
             onClick={handleExportJSON}
-            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 text-xs font-bold transition-all cursor-pointer"
+            className="flex items-center justify-center gap-1.5 px-3 py-2.5 sm:py-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 text-xs font-bold transition-all cursor-pointer"
           >
-            <Database className="w-4 h-4" />
-            <span>Backup (JSON)</span>
+            <Database className="w-4 h-4 shrink-0" />
+            <span className="truncate">Backup (JSON)</span>
           </button>
 
           {/* Restore JSON */}
           <button
             onClick={() => jsonInputRef.current?.click()}
-            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 text-xs font-bold transition-all cursor-pointer"
+            className="flex items-center justify-center gap-1.5 px-3 py-2.5 sm:py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 text-xs font-bold transition-all cursor-pointer"
           >
-            <Upload className="w-4 h-4" />
-            <span>Restore (JSON)</span>
+            <Upload className="w-4 h-4 shrink-0" />
+            <span className="truncate">Restore (JSON)</span>
           </button>
           <input
             type="file"
@@ -306,12 +306,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       </div>
 
       {/* Categories Management */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         {/* Income Categories */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                 Income Categories ({incomeCategories.length})
               </h3>
@@ -326,27 +326,28 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 value={newIncomeCat}
                 onChange={(e) => setNewIncomeCat(e.target.value)}
                 placeholder="New income category..."
-                className="grow px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden font-medium"
+                className="grow px-3 py-2 text-base sm:text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden font-medium"
               />
               <button
                 type="submit"
-                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0"
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0"
               >
                 Add
               </button>
             </form>
 
-            <div className="flex flex-wrap gap-1.5 max-h-56 overflow-y-auto p-1">
+            <div className="flex flex-wrap gap-1.5 max-h-56 overflow-y-auto p-1 no-scrollbar">
               {incomeCategories.map((cat) => (
                 <span
                   key={cat}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-semibold"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold"
                 >
-                  {cat}
+                  <span>{cat}</span>
                   <button
                     type="button"
                     onClick={() => handleRemoveIncomeCategory(cat)}
-                    className="hover:text-rose-600 cursor-pointer"
+                    className="p-0.5 hover:text-rose-600 cursor-pointer text-slate-400"
+                    aria-label={`Remove category ${cat}`}
                   >
                     ×
                   </button>
@@ -357,10 +358,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
 
         {/* Expense Categories */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
                 Expense Categories ({expenseCategories.length})
               </h3>
@@ -375,27 +376,28 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 value={newExpenseCat}
                 onChange={(e) => setNewExpenseCat(e.target.value)}
                 placeholder="New expense category..."
-                className="grow px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden font-medium"
+                className="grow px-3 py-2 text-base sm:text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden font-medium"
               />
               <button
                 type="submit"
-                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0"
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0"
               >
                 Add
               </button>
             </form>
 
-            <div className="flex flex-wrap gap-1.5 max-h-56 overflow-y-auto p-1">
+            <div className="flex flex-wrap gap-1.5 max-h-56 overflow-y-auto p-1 no-scrollbar">
               {expenseCategories.map((cat) => (
                 <span
                   key={cat}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 text-rose-800 border border-rose-200 text-[11px] font-semibold"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-800 border border-rose-200 text-xs font-semibold"
                 >
-                  {cat}
+                  <span>{cat}</span>
                   <button
                     type="button"
                     onClick={() => handleRemoveExpenseCategory(cat)}
-                    className="hover:text-rose-600 cursor-pointer"
+                    className="p-0.5 hover:text-rose-600 cursor-pointer text-slate-400"
+                    aria-label={`Remove category ${cat}`}
                   >
                     ×
                   </button>
@@ -407,17 +409,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       </div>
 
       {/* User Identity & Danger Zone */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         {/* Profile Card */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs">
           <div className="flex items-center gap-2 mb-3">
             <User className="w-5 h-5 text-indigo-600" />
-            <h3 className="text-base font-bold text-slate-900">User Profile</h3>
+            <h3 className="text-sm sm:text-base font-bold text-slate-900">User Profile</h3>
           </div>
           <form onSubmit={handleSaveProfile} className="space-y-4">
             {/* Avatar Photo Section */}
-            <div className="flex items-center gap-4">
-              <div className="relative group">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="relative group shrink-0">
                 {avatar ? (
                   <img
                     src={avatar}
@@ -434,6 +436,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   onClick={() => avatarInputRef.current?.click()}
                   className="absolute inset-0 rounded-full bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white cursor-pointer"
                   title="Upload Photo"
+                  aria-label="Upload Photo"
                 >
                   <Camera className="w-4 h-4" />
                 </button>
@@ -449,7 +452,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => avatarInputRef.current?.click()}
-                  className="text-xs font-semibold text-emerald-600 hover:text-emerald-800 cursor-pointer block"
+                  className="text-xs font-semibold text-emerald-600 hover:text-emerald-800 cursor-pointer block py-1"
                 >
                   {avatar ? 'Change Photo' : 'Upload Photo'}
                 </button>
@@ -462,7 +465,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       onUpdateUserProfile(updated);
                       saveUserProfile(updated);
                     }}
-                    className="text-[11px] font-semibold text-rose-600 hover:text-rose-800 cursor-pointer mt-0.5"
+                    className="text-[11px] font-semibold text-rose-600 hover:text-rose-800 cursor-pointer py-0.5"
                   >
                     Remove Photo
                   </button>
@@ -478,7 +481,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 type="text"
                 value={profileName}
                 onChange={(e) => setProfileName(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden font-medium"
+                className="w-full px-3 py-2.5 text-base sm:text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden font-medium"
               />
             </div>
             <div>
@@ -489,12 +492,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 type="text"
                 disabled
                 value="INR (₹) • Asia/Calcutta"
-                className="w-full px-3 py-2 text-xs bg-slate-100 border border-slate-200 rounded-xl text-slate-500 font-medium"
+                className="w-full px-3 py-2.5 text-base sm:text-xs bg-slate-100 border border-slate-200 rounded-xl text-slate-500 font-medium"
               />
             </div>
             <button
               type="submit"
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition-all cursor-pointer"
+              className="w-full sm:w-auto px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition-all cursor-pointer text-center"
             >
               Update Profile
             </button>
@@ -502,15 +505,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
 
         {/* Danger Zone */}
-        <div className="bg-white p-6 rounded-2xl border border-rose-200 shadow-xs flex flex-col justify-between">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-rose-200 shadow-xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <AlertTriangle className="w-5 h-5 text-rose-600" />
-              <h3 className="text-base font-bold text-rose-900">Data Reset & Maintenance</h3>
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
+              <h3 className="text-sm sm:text-base font-bold text-rose-900">Data Reset & Maintenance</h3>
             </div>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Permanently purge all offline database tables from this browser. Make sure to download a JSON backup before proceeding.
+            </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 pt-3 border-t border-slate-100">
+          <div className="flex flex-col sm:flex-row gap-3 pt-3 border-t border-slate-100 mt-4">
             <button
               type="button"
               onClick={() => {
@@ -523,9 +529,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   showNotification('All records cleared');
                 }
               }}
-              className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 text-xs font-semibold transition-all cursor-pointer"
+              className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 text-xs font-semibold transition-all cursor-pointer"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-4 h-4 shrink-0" />
               <span>Clear All Data</span>
             </button>
           </div>
