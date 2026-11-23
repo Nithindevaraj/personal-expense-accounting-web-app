@@ -48,25 +48,30 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigateToProjects,
   onEditTransaction,
 }) => {
-  const [timeRange, setTimeRange] = useState<'all' | 'this_month' | 'last_30_days'>('all');
+  const [timeRange, setTimeRange] = useState<'all' | 'this_year' | 'this_month' | 'last_30_days'>('all');
 
   // Filtered transactions based on selected range
   const filteredTransactions = useMemo(() => {
     if (timeRange === 'all') return transactions;
 
     const now = new Date();
+    if (timeRange === 'this_year') {
+      const currentYear = String(now.getFullYear());
+      return transactions.filter((t) => t.date.startsWith(currentYear));
+    }
+
     if (timeRange === 'this_month') {
       const currentYear = now.getFullYear();
       const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
       const prefix = `${currentYear}-${currentMonth}`;
-      return transactions.filter(t => t.date.startsWith(prefix));
+      return transactions.filter((t) => t.date.startsWith(prefix));
     }
 
     if (timeRange === 'last_30_days') {
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - 30);
       const cutoffStr = cutoff.toISOString().split('T')[0];
-      return transactions.filter(t => t.date >= cutoffStr);
+      return transactions.filter((t) => t.date >= cutoffStr);
     }
 
     return transactions;
@@ -191,7 +196,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
           <button
             onClick={() => setTimeRange('all')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               timeRange === 'all'
                 ? 'bg-white text-slate-900 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -200,8 +205,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             All Time
           </button>
           <button
+            onClick={() => setTimeRange('this_year')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+              timeRange === 'this_year'
+                ? 'bg-white text-slate-900 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            This Year
+          </button>
+          <button
             onClick={() => setTimeRange('this_month')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               timeRange === 'this_month'
                 ? 'bg-white text-slate-900 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -211,7 +226,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </button>
           <button
             onClick={() => setTimeRange('last_30_days')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               timeRange === 'last_30_days'
                 ? 'bg-white text-slate-900 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
