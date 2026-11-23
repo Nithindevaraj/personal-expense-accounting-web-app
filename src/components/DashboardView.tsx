@@ -185,9 +185,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">
             Financial Dashboard
           </h1>
-          <p className="text-sm text-slate-500">
-            Real-time balance, cashflow velocity, and project ledger telemetry
-          </p>
         </div>
 
         {/* Range Buttons */}

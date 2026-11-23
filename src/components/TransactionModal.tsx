@@ -147,9 +147,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 {editingTransaction ? 'Edit Transaction' : 'Record New Transaction'}
               </h2>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Enter transaction details matching your Google Sheets schema
-            </p>
           </div>
           <button
             onClick={onClose}
@@ -238,7 +235,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Project Tag (Cost Center) *
+                Project Tag
               </label>
               <select
                 required
