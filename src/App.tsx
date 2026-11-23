@@ -7,7 +7,6 @@ import {
   getStoredProjects,
   getStoredTransactions,
   getUserProfile,
-  resetToDefaults,
   saveStoredExpenseCategories,
   saveStoredIncomeCategories,
   saveStoredProjects,
@@ -212,15 +211,6 @@ export const App: React.FC = () => {
     saveStoredTransactions(finalTransactions);
   };
 
-  const handleResetAllData = () => {
-    resetToDefaults();
-    setTransactions(getStoredTransactions());
-    setProjects(getStoredProjects());
-    setIncomeCategories(getStoredIncomeCategories());
-    setExpenseCategories(getStoredExpenseCategories());
-    setUserProfile(getUserProfile());
-  };
-
   const handleClearAllData = () => {
     setTransactions([]);
     saveStoredTransactions([]);
@@ -315,7 +305,6 @@ export const App: React.FC = () => {
               saveUserProfile(prof);
             }}
             onImportTransactions={handleImportTransactions}
-            onResetAllData={handleResetAllData}
             onClearAllData={handleClearAllData}
           />
         )}

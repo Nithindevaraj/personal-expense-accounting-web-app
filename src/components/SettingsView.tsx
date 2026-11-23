@@ -2,7 +2,6 @@ import React, { useRef, useState } from 'react';
 import {
   Download,
   Upload,
-  RefreshCw,
   Trash2,
   Database,
   FileSpreadsheet,
@@ -29,7 +28,6 @@ interface SettingsViewProps {
   onUpdateExpenseCategories: (cats: string[]) => void;
   onUpdateUserProfile: (profile: UserProfile) => void;
   onImportTransactions: (imported: Transaction[]) => void;
-  onResetAllData: () => void;
   onClearAllData: () => void;
 }
 
@@ -43,7 +41,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onUpdateExpenseCategories,
   onUpdateUserProfile,
   onImportTransactions,
-  onResetAllData,
   onClearAllData,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -426,26 +423,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <AlertTriangle className="w-5 h-5 text-rose-600" />
               <h3 className="text-base font-bold text-rose-900">Data Reset & Maintenance</h3>
             </div>
-            <p className="text-xs text-slate-500 mb-4">
-              Reload the realistic sample accounting data or wipe local storage clean.
-            </p>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-3 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => {
-                if (window.confirm('Reset all transactions and projects to demo data?')) {
-                  onResetAllData();
-                  showNotification('Reset to demo accounting dataset');
-                }
-              }}
-              className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-semibold transition-all cursor-pointer"
-            >
-              <RefreshCw className="w-4 h-4" />
-              <span>Reset to Demo Data</span>
-            </button>
-
             <button
               type="button"
               onClick={() => {
