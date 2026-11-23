@@ -18,6 +18,7 @@ export interface UserProfile {
   name: string;
   currency: string;
   email: string;
+  avatar?: string; // Base64 data URL
 }
 
 export const DEFAULT_USER_PROFILE: UserProfile = {

@@ -9,8 +9,10 @@ import {
   Wallet,
   TrendingUp,
   TrendingDown,
+  User,
 } from 'lucide-react';
 import { formatINR } from '../utils/formatters';
+import type { UserProfile } from '../utils/storage';
 
 export type ActiveTab = 'dashboard' | 'transactions' | 'projects' | 'analytics' | 'settings';
 
@@ -23,6 +25,8 @@ interface NavbarProps {
   netBalance: number;
   transactionCount: number;
   projectCount: number;
+  userProfile: UserProfile;
+  onOpenProfile: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -32,6 +36,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   netBalance,
   transactionCount,
   projectCount,
+  userProfile,
+  onOpenProfile,
 }) => {
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
@@ -43,13 +49,36 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
               <Wallet className="w-4 h-4" />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <span className="font-bold text-base sm:text-lg text-slate-900 tracking-tight">
                 Personal Accounting
               </span>
-              <span className="text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full">
-                INR ₹
-              </span>
+              {/* Profile Icon / Photo Button */}
+              <button
+                type="button"
+                onClick={onOpenProfile}
+                className="flex items-center gap-1.5 p-0.5 pr-2 rounded-full bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-slate-700 transition-all cursor-pointer group shadow-2xs"
+                title="Edit User Profile & Photo"
+              >
+                {userProfile.avatar ? (
+                  <img
+                    src={userProfile.avatar}
+                    alt={userProfile.name || 'User'}
+                    className="w-6 h-6 rounded-full object-cover ring-1 ring-emerald-500/30"
+                  />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-[11px] font-bold">
+                    {userProfile.name ? (
+                      userProfile.name.charAt(0).toUpperCase()
+                    ) : (
+                      <User className="w-3.5 h-3.5" />
+                    )}
+                  </div>
+                )}
+                <span className="text-xs font-semibold text-slate-700 group-hover:text-slate-900 truncate max-w-[90px]">
+                  {userProfile.name || 'Profile'}
+                </span>
+              </button>
             </div>
           </div>
 

@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   User,
+  Camera,
 } from 'lucide-react';
 import type { Project, Transaction } from '../types';
 import {
@@ -49,7 +50,36 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [newIncomeCat, setNewIncomeCat] = useState('');
   const [newExpenseCat, setNewExpenseCat] = useState('');
   const [profileName, setProfileName] = useState(userProfile.name);
+  const [avatar, setAvatar] = useState<string | undefined>(userProfile.avatar);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [notification, setNotification] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    setProfileName(userProfile.name);
+    setAvatar(userProfile.avatar);
+  }, [userProfile]);
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Profile photo size should be under 2MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      if (base64) {
+        setAvatar(base64);
+        const updated = { ...userProfile, name: profileName, avatar: base64 };
+        onUpdateUserProfile(updated);
+        saveUserProfile(updated);
+        showNotification('Profile photo updated');
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
 
   const showNotification = (msg: string) => {
     setNotification(msg);
@@ -181,10 +211,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     saveStoredExpenseCategories(updated);
   };
 
-  // Save Profile Name
+  // Save Profile Name & Photo
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    const updated = { ...userProfile, name: profileName };
+    const updated = { ...userProfile, name: profileName, avatar };
     onUpdateUserProfile(updated);
     saveUserProfile(updated);
     showNotification('Profile updated successfully');
@@ -384,7 +414,62 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <User className="w-5 h-5 text-indigo-600" />
             <h3 className="text-base font-bold text-slate-900">User Profile</h3>
           </div>
-          <form onSubmit={handleSaveProfile} className="space-y-3">
+          <form onSubmit={handleSaveProfile} className="space-y-4">
+            {/* Avatar Photo Section */}
+            <div className="flex items-center gap-4">
+              <div className="relative group">
+                {avatar ? (
+                  <img
+                    src={avatar}
+                    alt={profileName || 'Profile'}
+                    className="w-14 h-14 rounded-full object-cover ring-2 ring-emerald-500/20 shadow-xs"
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-lg font-bold shadow-xs">
+                    {profileName ? profileName.charAt(0).toUpperCase() : <User className="w-6 h-6" />}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  className="absolute inset-0 rounded-full bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white cursor-pointer"
+                  title="Upload Photo"
+                >
+                  <Camera className="w-4 h-4" />
+                </button>
+              </div>
+              <input
+                type="file"
+                ref={avatarInputRef}
+                onChange={handleAvatarUpload}
+                accept="image/*"
+                className="hidden"
+              />
+              <div>
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  className="text-xs font-semibold text-emerald-600 hover:text-emerald-800 cursor-pointer block"
+                >
+                  {avatar ? 'Change Photo' : 'Upload Photo'}
+                </button>
+                {avatar && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAvatar(undefined);
+                      const updated = { ...userProfile, name: profileName, avatar: undefined };
+                      onUpdateUserProfile(updated);
+                      saveUserProfile(updated);
+                    }}
+                    className="text-[11px] font-semibold text-rose-600 hover:text-rose-800 cursor-pointer mt-0.5"
+                  >
+                    Remove Photo
+                  </button>
+                )}
+              </div>
+            </div>
+
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1">
                 Account Holder Name

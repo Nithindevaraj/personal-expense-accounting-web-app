@@ -21,6 +21,7 @@ import { AnalyticsView } from './components/AnalyticsView';
 import { SettingsView } from './components/SettingsView';
 import { TransactionModal } from './components/TransactionModal';
 import { AttachmentViewerModal } from './components/AttachmentViewerModal';
+import { ProfileModal } from './components/ProfileModal';
 
 export const App: React.FC = () => {
   // Global State
@@ -33,6 +34,7 @@ export const App: React.FC = () => {
 
   // Modals
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [txLedgerFilter, setTxLedgerFilter] = useState<{
     tag?: string;
@@ -231,6 +233,8 @@ export const App: React.FC = () => {
         netBalance={netBalance}
         transactionCount={transactions.length}
         projectCount={projects.length}
+        userProfile={userProfile}
+        onOpenProfile={() => setIsProfileModalOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -342,6 +346,17 @@ export const App: React.FC = () => {
         onClose={() => setAttachmentModal({ isOpen: false, url: null, title: '' })}
         imageUrl={attachmentModal.url}
         title={attachmentModal.title}
+      />
+
+      {/* User Profile & Photo Edit Modal */}
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        userProfile={userProfile}
+        onSaveProfile={(updatedProfile) => {
+          setUserProfile(updatedProfile);
+          saveUserProfile(updatedProfile);
+        }}
       />
     </div>
   );
