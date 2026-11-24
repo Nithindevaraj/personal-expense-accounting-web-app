@@ -428,7 +428,6 @@ export const App: React.FC = () => {
             }}
             onImportTransactions={handleImportTransactions}
             onClearAllData={handleClearAllData}
-            onOpenInstallModal={() => setIsInstallModalOpen(true)}
           />
         )}
       </main>

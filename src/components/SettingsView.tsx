@@ -7,25 +7,14 @@ import {
   FileSpreadsheet,
   CheckCircle2,
   AlertTriangle,
-  User,
-  Camera,
-  Smartphone,
-  RefreshCw,
-  ShieldCheck,
-  LogOut,
-  LogIn,
-  KeyRound,
 } from 'lucide-react';
-import { usePWAInstall } from '../utils/pwa';
 import type { Project, Transaction } from '../types';
 import {
   type UserProfile,
   saveStoredExpenseCategories,
   saveStoredIncomeCategories,
-  saveUserProfile,
 } from '../utils/storage';
 import { parseCSVToTransactions, transactionsToCSV } from '../utils/formatters';
-import { useAuth } from '../context/AuthContext';
 
 interface SettingsViewProps {
   transactions: Transaction[];
@@ -38,7 +27,6 @@ interface SettingsViewProps {
   onUpdateUserProfile: (profile: UserProfile) => void;
   onImportTransactions: (imported: Transaction[]) => void;
   onClearAllData: () => void;
-  onOpenInstallModal?: () => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -52,46 +40,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onUpdateUserProfile,
   onImportTransactions,
   onClearAllData,
-  onOpenInstallModal,
 }) => {
-  const { user, signOut, signInWithGoogle, isConfigured } = useAuth();
-  const { isInstalled } = usePWAInstall();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
 
   const [newIncomeCat, setNewIncomeCat] = useState('');
   const [newExpenseCat, setNewExpenseCat] = useState('');
-  const [profileName, setProfileName] = useState(userProfile.name);
-  const [avatar, setAvatar] = useState<string | undefined>(userProfile.avatar);
-  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [notification, setNotification] = useState<string | null>(null);
-
-  React.useEffect(() => {
-    setProfileName(userProfile.name);
-    setAvatar(userProfile.avatar);
-  }, [userProfile]);
-
-  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      alert('Profile photo size should be under 2MB.');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string;
-      if (base64) {
-        setAvatar(base64);
-        const updated = { ...userProfile, name: profileName, avatar: base64 };
-        onUpdateUserProfile(updated);
-        saveUserProfile(updated);
-        showNotification('Profile photo updated');
-      }
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
 
   const showNotification = (msg: string) => {
     setNotification(msg);
@@ -223,15 +178,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     saveStoredExpenseCategories(updated);
   };
 
-  // Save Profile Name & Photo
-  const handleSaveProfile = (e: React.FormEvent) => {
-    e.preventDefault();
-    const updated = { ...userProfile, name: profileName, avatar };
-    onUpdateUserProfile(updated);
-    saveUserProfile(updated);
-    showNotification('Profile updated successfully');
-  };
-
   return (
     <div className="space-y-4 sm:space-y-6 pb-12 animate-fade-in max-w-5xl mx-auto">
       {/* Toast Notification */}
@@ -241,93 +187,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <span>{notification}</span>
         </div>
       )}
-
-      {/* Header */}
-      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
-        <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
-          Data Management & Configuration
-        </h1>
-        <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-          Manage backups, import/export CSV to Google Sheets, and customize transaction categories
-        </p>
-      </div>
-
-      {/* Cloud Database & Security Status */}
-      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-200">
-              <Database className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
-                <span>Supabase & Google Authentication</span>
-                {isConfigured ? (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                    Live
-                  </span>
-                ) : (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
-                    Keys Pending
-                  </span>
-                )}
-              </h2>
-              <p className="text-xs text-slate-500">
-                PostgreSQL Database with Row-Level Security (RLS) partition isolation
-              </p>
-            </div>
-          </div>
-
-          <div>
-            {user ? (
-              <button
-                type="button"
-                onClick={() => {
-                  if (confirm(`Sign out of Google (${user.email})?`)) {
-                    signOut();
-                  }
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-rose-50 hover:border-rose-200 text-slate-600 hover:text-rose-600 text-xs font-semibold transition cursor-pointer"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>Sign Out ({user.email})</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={signInWithGoogle}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition cursor-pointer shadow-xs"
-              >
-                <LogIn className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Sign In with Google</span>
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-            <span className="text-slate-500 block font-medium">Google OAuth Identity</span>
-            <span className="font-semibold text-slate-900 truncate block mt-0.5">
-              {user ? user.email : 'Unauthenticated (Offline Demo)'}
-            </span>
-          </div>
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-            <span className="text-slate-500 block font-medium">Row-Level Security (RLS)</span>
-            <span className="font-semibold text-emerald-700 flex items-center gap-1 mt-0.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>{user ? 'Enforced (auth.uid)' : 'Active on Login'}</span>
-            </span>
-          </div>
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-            <span className="text-slate-500 block font-medium">Database Host</span>
-            <span className="font-semibold text-slate-800 flex items-center gap-1 mt-0.5">
-              <KeyRound className="w-3.5 h-3.5 text-slate-500" />
-              <span className="truncate">{isConfigured ? 'Supabase Managed PG' : 'Local Storage Fallback'}</span>
-            </span>
-          </div>
-        </div>
-      </div>
 
       {/* Import / Export Card */}
       <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3 sm:space-y-4">
@@ -497,196 +356,36 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </div>
 
-      {/* Progressive Web App & Offline Installation */}
-      <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-teal-950 text-white p-4 sm:p-6 rounded-2xl shadow-sm border border-emerald-900/60">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-start gap-3.5">
-            <div className="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400 shrink-0">
-              <Smartphone className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-sm sm:text-base tracking-tight">
-                  Progressive Web App (PWA)
-                </h3>
-                {isInstalled ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                    <CheckCircle2 className="w-3 h-3" />
-                    Installed (Standalone Mode)
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                    Browser Mode
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-300 mt-1 max-w-xl leading-relaxed">
-                Install this app on your device for standalone window display, offline transaction recording, and home screen / desktop shortcut access with zero network lag.
-              </p>
-            </div>
+      {/* Data Reset & Maintenance */}
+      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-rose-200 shadow-xs flex flex-col justify-between">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
+            <h3 className="text-sm sm:text-base font-bold text-rose-900">Data Reset & Maintenance</h3>
           </div>
-
-          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-            {!isInstalled && onOpenInstallModal && (
-              <button
-                type="button"
-                onClick={onOpenInstallModal}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-bold text-xs shadow-md transition-all cursor-pointer"
-              >
-                <Download className="w-4 h-4 stroke-[2.5]" />
-                <span>Install Web App</span>
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={() => {
-                if ('serviceWorker' in navigator) {
-                  navigator.serviceWorker.getRegistrations().then((regs) => {
-                    for (const reg of regs) reg.update();
-                    showNotification('Service worker cache refreshed');
-                  });
-                } else {
-                  showNotification('PWA cache active');
-                }
-              }}
-              className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-xs transition cursor-pointer border border-white/10"
-              title="Check for Service Worker update"
-            >
-              <RefreshCw className="w-3.5 h-3.5 text-emerald-300" />
-              <span>Update Cache</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* User Identity & Danger Zone */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-        {/* Profile Card */}
-        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs">
-          <div className="flex items-center gap-2 mb-3">
-            <User className="w-5 h-5 text-indigo-600" />
-            <h3 className="text-sm sm:text-base font-bold text-slate-900">User Profile</h3>
-          </div>
-          <form onSubmit={handleSaveProfile} className="space-y-4">
-            {/* Avatar Photo Section */}
-            <div className="flex items-center gap-3 sm:gap-4">
-              <div className="relative group shrink-0">
-                {avatar ? (
-                  <img
-                    src={avatar}
-                    alt={profileName || 'Profile'}
-                    className="w-14 h-14 rounded-full object-cover ring-2 ring-emerald-500/20 shadow-xs"
-                  />
-                ) : (
-                  <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-lg font-bold shadow-xs">
-                    {profileName ? profileName.charAt(0).toUpperCase() : <User className="w-6 h-6" />}
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => avatarInputRef.current?.click()}
-                  className="absolute inset-0 rounded-full bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white cursor-pointer"
-                  title="Upload Photo"
-                  aria-label="Upload Photo"
-                >
-                  <Camera className="w-4 h-4" />
-                </button>
-              </div>
-              <input
-                type="file"
-                ref={avatarInputRef}
-                onChange={handleAvatarUpload}
-                accept="image/*"
-                className="hidden"
-              />
-              <div>
-                <button
-                  type="button"
-                  onClick={() => avatarInputRef.current?.click()}
-                  className="text-xs font-semibold text-emerald-600 hover:text-emerald-800 cursor-pointer block py-1"
-                >
-                  {avatar ? 'Change Photo' : 'Upload Photo'}
-                </button>
-                {avatar && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAvatar(undefined);
-                      const updated = { ...userProfile, name: profileName, avatar: undefined };
-                      onUpdateUserProfile(updated);
-                      saveUserProfile(updated);
-                    }}
-                    className="text-[11px] font-semibold text-rose-600 hover:text-rose-800 cursor-pointer py-0.5"
-                  >
-                    Remove Photo
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
-                Account Holder Name
-              </label>
-              <input
-                type="text"
-                value={profileName}
-                onChange={(e) => setProfileName(e.target.value)}
-                className="w-full px-3 py-2.5 text-base sm:text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden font-medium"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
-                Currency & Region
-              </label>
-              <input
-                type="text"
-                disabled
-                value="INR (₹) • Asia/Calcutta"
-                className="w-full px-3 py-2.5 text-base sm:text-xs bg-slate-100 border border-slate-200 rounded-xl text-slate-500 font-medium"
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full sm:w-auto px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition-all cursor-pointer text-center"
-            >
-              Update Profile
-            </button>
-          </form>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            Permanently purge all offline database tables from this browser. Make sure to download a JSON backup before proceeding.
+          </p>
         </div>
 
-        {/* Danger Zone */}
-        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-rose-200 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
-              <h3 className="text-sm sm:text-base font-bold text-rose-900">Data Reset & Maintenance</h3>
-            </div>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Permanently purge all offline database tables from this browser. Make sure to download a JSON backup before proceeding.
-            </p>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-3 pt-3 border-t border-slate-100 mt-4">
-            <button
-              type="button"
-              onClick={() => {
-                if (
-                  window.confirm(
-                    'DANGER: Are you sure you want to permanently clear all local records? This cannot be undone.'
-                  )
-                ) {
-                  onClearAllData();
-                  showNotification('All records cleared');
-                }
-              }}
-              className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 text-xs font-semibold transition-all cursor-pointer"
-            >
-              <Trash2 className="w-4 h-4 shrink-0" />
-              <span>Clear All Data</span>
-            </button>
-          </div>
+        <div className="flex flex-col sm:flex-row gap-3 pt-3 border-t border-slate-100 mt-4">
+          <button
+            type="button"
+            onClick={() => {
+              if (
+                window.confirm(
+                  'DANGER: Are you sure you want to permanently clear all local records? This cannot be undone.'
+                )
+              ) {
+                onClearAllData();
+                showNotification('All records cleared');
+              }
+            }}
+            className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 text-xs font-semibold transition-all cursor-pointer"
+          >
+            <Trash2 className="w-4 h-4 shrink-0" />
+            <span>Clear All Data</span>
+          </button>
         </div>
       </div>
     </div>
