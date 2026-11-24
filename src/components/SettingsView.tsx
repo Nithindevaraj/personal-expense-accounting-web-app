@@ -7,6 +7,7 @@ import {
   FileSpreadsheet,
   CheckCircle2,
   AlertTriangle,
+  FileText,
 } from 'lucide-react';
 import type { Project, Transaction } from '../types';
 import {
@@ -14,7 +15,11 @@ import {
   saveStoredExpenseCategories,
   saveStoredIncomeCategories,
 } from '../utils/storage';
-import { parseCSVToTransactions, transactionsToCSV } from '../utils/formatters';
+import {
+  exportTransactionsToPDF,
+  parseCSVToTransactions,
+  transactionsToCSV,
+} from '../utils/formatters';
 
 interface SettingsViewProps {
   transactions: Transaction[];
@@ -51,6 +56,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const showNotification = (msg: string) => {
     setNotification(msg);
     setTimeout(() => setNotification(null), 4000);
+  };
+
+  // PDF Export
+  const handleExportPDF = () => {
+    if (transactions.length === 0) {
+      alert('No transactions available to export as PDF.');
+      return;
+    }
+    exportTransactionsToPDF(transactions, userProfile);
+    showNotification('Preparing PDF statement...');
   };
 
   // CSV Export
@@ -193,14 +208,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="flex items-center gap-2">
           <FileSpreadsheet className="w-5 h-5 text-emerald-600 shrink-0" />
           <h2 className="text-sm sm:text-base font-bold text-slate-900">
-            Google Sheets Interoperability & Backup
+            import & export
           </h2>
         </div>
         <p className="text-xs text-slate-500 leading-relaxed">
-          The CSV exporter generates identical columns as your original Google Sheet (`Sl.No`, `Date`, `income/expense`, `type of income/expense`, `Amount`, `Tags`, `Description or Remarks`, `Attachments`, `Notes`).
+          Export your accounting records to formatted PDF reports or Google Sheets CSV, and backup/restore complete JSON archives.
         </p>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 pt-1">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 pt-1">
+          {/* Export as PDF */}
+          <button
+            onClick={handleExportPDF}
+            className="flex items-center justify-center gap-1.5 px-3 py-2.5 sm:py-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 text-xs font-bold transition-all cursor-pointer"
+          >
+            <FileText className="w-4 h-4 shrink-0 text-rose-600" />
+            <span className="truncate">export as PDF</span>
+          </button>
+
           {/* Export CSV */}
           <button
             onClick={handleExportCSV}
