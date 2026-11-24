@@ -344,7 +344,6 @@ export const App: React.FC = () => {
         projectCount={projects.length}
         userProfile={userProfile}
         onOpenProfile={() => setIsProfileModalOpen(true)}
-        onOpenInstallModal={() => setIsInstallModalOpen(true)}
       />
 
       {/* Cloud Sync Status Banner */}
