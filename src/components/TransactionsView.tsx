@@ -766,6 +766,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                   </th>
 
                   <th className="p-3 w-32">Projects</th>
+                  <th className="p-3 w-32">Sub-project</th>
                   <th className="p-3 min-w-[180px]">Description</th>
                   <th className="p-3 w-24 text-center">Attachments</th>
                   <th className="p-3 min-w-[150px]">Notes</th>
@@ -777,7 +778,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
               <tbody className="divide-y divide-slate-200/60 font-medium">
                 {sorted.length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="py-12 text-center text-slate-400">
+                    <td colSpan={12} className="py-12 text-center text-slate-400">
                       No transactions
                     </td>
                   </tr>
@@ -850,10 +851,21 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
 
                         {/* Project Tag */}
                         <td className="p-3">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/90 border border-slate-300/80 text-[11px] font-bold text-slate-800 shadow-2xs">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/90 border border-slate-300/80 text-[11px] font-bold text-slate-800 shadow-2xs whitespace-nowrap">
                             <Tag className="w-3 h-3 text-indigo-600" />
-                            {t.subTag ? `${t.tag} / ${t.subTag}` : t.tag}
+                            {t.tag}
                           </span>
+                        </td>
+
+                        {/* Sub-project Tag */}
+                        <td className="p-3">
+                          {t.subTag ? (
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-indigo-50/90 border border-indigo-200/80 text-[11px] font-semibold text-indigo-800 shadow-2xs whitespace-nowrap">
+                              {t.subTag}
+                            </span>
+                          ) : (
+                            <span className="text-slate-300">-</span>
+                          )}
                         </td>
 
                         {/* Description */}
