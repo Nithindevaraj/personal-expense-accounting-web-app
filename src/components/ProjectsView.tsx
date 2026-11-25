@@ -449,7 +449,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                         className="w-3.5 h-3.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
                         aria-label={`Mark ${p.name} as completed`}
                       />
-                      <span className="hidden xl:inline">Done</span>
+                      <span>Done</span>
                     </label>
                     <button
                       onClick={() => handleOpenEdit(p)}
