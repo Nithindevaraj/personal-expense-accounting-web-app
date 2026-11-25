@@ -8,6 +8,7 @@ export interface Transaction {
   category: string;
   amount: number;
   tag: string; // Project Tag (e.g. Project Alpha, Beta, etc.)
+  subTag?: string | null; // Optional Sub-project Tag
   description: string;
   attachments?: string[]; // Data URLs or filenames
   notes?: string;
@@ -16,10 +17,13 @@ export interface Transaction {
 
 export interface Project {
   id: string;
+  parentId?: string | null;
   name: string;
   description?: string;
   budget?: number;
   color?: string;
+  completed?: boolean;
+  completedAt?: number | null;
   createdAt: number;
 }
 

@@ -122,9 +122,11 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ transactions, proj
       .sort((a, b) => b.value - a.value);
   }, [yearFiltered]);
 
-  // Project P&L Comparison Data for BarChart
+  // Project P&L Comparison Data for BarChart (rolled up to top-level projects)
   const projectComparisonData = useMemo(() => {
-    return projects.map((p) => {
+    return projects
+      .filter((p) => !p.parentId)
+      .map((p) => {
       let inc = 0;
       let exp = 0;
       for (const t of yearFiltered) {

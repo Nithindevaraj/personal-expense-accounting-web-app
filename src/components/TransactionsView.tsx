@@ -26,7 +26,7 @@ interface TransactionsViewProps {
   projects: Project[];
   incomeCategories: string[];
   expenseCategories: string[];
-  initialFilter?: { tag?: string; type?: TransactionType };
+  initialFilter?: { tag?: string; subTag?: string; type?: TransactionType };
   onOpenNewTransaction: () => void;
   onEditTransaction: (t: Transaction) => void;
   onDeleteTransaction: (id: string) => void;
@@ -50,7 +50,13 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>(initialFilter?.type || 'all');
-  const [tagFilter, setTagFilter] = useState<string>(initialFilter?.tag || 'all');
+  const [tagFilter, setTagFilter] = useState<string>(
+    initialFilter?.tag
+      ? initialFilter.subTag
+        ? `${initialFilter.tag}:::${initialFilter.subTag}`
+        : initialFilter.tag
+      : 'all'
+  );
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
@@ -58,12 +64,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   const [sortAsc, setSortAsc] = useState<boolean>(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isFiltersOpen, setIsFiltersOpen] = useState<boolean>(false);
-  const [viewMode, setViewMode] = useState<'cards' | 'table'>(() => {
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
-      return 'cards';
-    }
-    return 'table';
-  });
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
@@ -85,8 +86,15 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
     return transactions.filter((t) => {
       // Type
       if (typeFilter !== 'all' && t.type !== typeFilter) return false;
-      // Tag
-      if (tagFilter !== 'all' && t.tag !== tagFilter) return false;
+      // Tag (supports "Parent" or "Parent:::SubProject")
+      if (tagFilter !== 'all') {
+        if (tagFilter.includes(':::')) {
+          const [parentName, subName] = tagFilter.split(':::');
+          if (t.tag !== parentName || t.subTag !== subName) return false;
+        } else if (t.tag !== tagFilter) {
+          return false;
+        }
+      }
       // Category
       if (categoryFilter !== 'all' && t.category !== categoryFilter) return false;
       // Date Range
@@ -99,8 +107,9 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         const inNotes = (t.notes || '').toLowerCase().includes(query);
         const inCat = (t.category || '').toLowerCase().includes(query);
         const inTag = (t.tag || '').toLowerCase().includes(query);
+        const inSubTag = (t.subTag || '').toLowerCase().includes(query);
         const inAmount = String(t.amount).includes(query);
-        if (!inDesc && !inNotes && !inCat && !inTag && !inAmount) return false;
+        if (!inDesc && !inNotes && !inCat && !inTag && !inSubTag && !inAmount) return false;
       }
       return true;
     });
@@ -195,11 +204,8 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
         <div className="flex items-center gap-2.5">
           <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
-            Transactions Ledger
+            Ledger
           </h1>
-          <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-            {sorted.length} {sorted.length === 1 ? 'entry' : 'entries'}
-          </span>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto justify-between sm:justify-end">
@@ -303,11 +309,6 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           >
             <Filter className="w-3.5 h-3.5" />
             <span>Filters</span>
-            {activeFilterCount > 0 && (
-              <span className="w-4 h-4 rounded-full bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center">
-                {activeFilterCount}
-              </span>
-            )}
             {isFiltersOpen ? (
               <ChevronUp className="w-3 h-3 text-slate-400" />
             ) : (
@@ -358,22 +359,39 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
 
         {/* Detailed Filters (Collapsible on mobile, permanent on desktop) */}
         <div className={`${isFiltersOpen ? 'grid' : 'hidden'} sm:grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 gap-2.5 pt-2 border-t border-slate-100`}>
-          {/* Project Tag Filter */}
+          {/* Project Filter */}
           <div>
             <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-              Project Tag
+              Project
             </label>
             <select
               value={tagFilter}
               onChange={(e) => setTagFilter(e.target.value)}
               className="w-full px-3 py-2 text-base sm:text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium text-slate-700"
             >
-              <option value="all">All Project Tags</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.name}>
-                  {p.name}
-                </option>
-              ))}
+              <option value="all">All Projects</option>
+              {projects
+                .filter((p) => !p.parentId)
+                .map((p) => {
+                  const subs = projects.filter((s) => s.parentId === p.id);
+                  if (subs.length === 0) {
+                    return (
+                      <option key={p.id} value={p.name}>
+                        {p.name}
+                      </option>
+                    );
+                  }
+                  return (
+                    <optgroup key={p.id} label={p.name}>
+                      <option value={p.name}>{p.name} (All)</option>
+                      {subs.map((sub) => (
+                        <option key={sub.id} value={`${p.name}:::${sub.name}`}>
+                          ↳ {sub.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  );
+                })}
             </select>
           </div>
 
@@ -399,7 +417,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           {/* Date Range Inputs */}
           <div>
             <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-              Date Range (From - To)
+              Date Range
             </label>
             <div className="flex items-center gap-1.5">
               <input
@@ -586,7 +604,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                         </span>
                         <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-200/60">
                           <Tag className="w-3 h-3 text-indigo-600" />
-                          {t.tag}
+                          {t.subTag ? `${t.tag} / ${t.subTag}` : t.tag}
                         </span>
                       </div>
                     </div>
@@ -747,8 +765,8 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                     </div>
                   </th>
 
-                  <th className="p-3 w-32">Tags (Project)</th>
-                  <th className="p-3 min-w-[180px]">Description / Remarks</th>
+                  <th className="p-3 w-32">Projects</th>
+                  <th className="p-3 min-w-[180px]">Description</th>
                   <th className="p-3 w-24 text-center">Attachments</th>
                   <th className="p-3 min-w-[150px]">Notes</th>
                   <th className="p-3 w-24 text-center">Actions</th>
@@ -760,7 +778,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                 {sorted.length === 0 ? (
                   <tr>
                     <td colSpan={11} className="py-12 text-center text-slate-400">
-                      No transactions match the selected criteria.
+                      No transactions
                     </td>
                   </tr>
                 ) : (
@@ -834,7 +852,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                         <td className="p-3">
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/90 border border-slate-300/80 text-[11px] font-bold text-slate-800 shadow-2xs">
                             <Tag className="w-3 h-3 text-indigo-600" />
-                            {t.tag}
+                            {t.subTag ? `${t.tag} / ${t.subTag}` : t.tag}
                           </span>
                         </td>
 

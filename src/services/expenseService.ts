@@ -14,6 +14,7 @@ export interface DbExpenseRow {
   category: string;
   amount: number;
   tag: string | null;
+  sub_tag?: string | null;
   description: string;
   notes: string | null;
   attachments: string[] | null;
@@ -31,6 +32,7 @@ export function mapRowToTransaction(row: DbExpenseRow): Transaction {
     category: row.category,
     amount: Number(row.amount),
     tag: row.tag || 'Personal',
+    subTag: row.sub_tag || null,
     description: row.description || '',
     attachments: row.attachments || [],
     notes: row.notes || '',
@@ -47,6 +49,7 @@ export function mapTransactionToPayload(tx: Omit<Transaction, 'id' | 'createdAt'
     category: tx.category,
     amount: tx.amount,
     tag: tx.tag || 'Personal',
+    sub_tag: tx.subTag || null,
     description: tx.description || '',
     notes: tx.notes || '',
     attachments: tx.attachments || [],
@@ -135,6 +138,7 @@ export async function updateExpense(
   if (updates.category !== undefined) payload.category = updates.category;
   if (updates.amount !== undefined) payload.amount = updates.amount;
   if (updates.tag !== undefined) payload.tag = updates.tag;
+  if (updates.subTag !== undefined) payload.sub_tag = updates.subTag || null;
   if (updates.description !== undefined) payload.description = updates.description;
   if (updates.notes !== undefined) payload.notes = updates.notes;
   if (updates.attachments !== undefined) payload.attachments = updates.attachments;

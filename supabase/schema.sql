@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS public.expenses (
     category TEXT NOT NULL,
     amount NUMERIC(12, 2) NOT NULL CHECK (amount >= 0),
     tag TEXT DEFAULT 'Personal',
+    sub_tag TEXT DEFAULT NULL,
     description TEXT NOT NULL DEFAULT '',
     notes TEXT DEFAULT '',
     attachments TEXT[] DEFAULT '{}'::TEXT[],
@@ -28,10 +29,13 @@ CREATE TABLE IF NOT EXISTS public.expenses (
 CREATE TABLE IF NOT EXISTS public.projects (
     id TEXT PRIMARY KEY,
     user_id UUID NOT NULL DEFAULT auth.uid() REFERENCES auth.users(id) ON DELETE CASCADE,
+    parent_id TEXT REFERENCES public.projects(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     description TEXT DEFAULT '',
     budget NUMERIC(12, 2) DEFAULT 0,
     color TEXT DEFAULT '#3b82f6',
+    completed BOOLEAN NOT NULL DEFAULT false,
+    completed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
@@ -53,6 +57,7 @@ CREATE INDEX IF NOT EXISTS idx_expenses_user_date ON public.expenses (user_id, d
 CREATE INDEX IF NOT EXISTS idx_expenses_user_category ON public.expenses (user_id, category);
 CREATE INDEX IF NOT EXISTS idx_expenses_user_type ON public.expenses (user_id, type);
 CREATE INDEX IF NOT EXISTS idx_projects_user_id ON public.projects (user_id);
+CREATE INDEX IF NOT EXISTS idx_projects_parent_id ON public.projects (parent_id);
 
 -- ==============================================================================
 -- 6. ROW LEVEL SECURITY (RLS) POLICIES

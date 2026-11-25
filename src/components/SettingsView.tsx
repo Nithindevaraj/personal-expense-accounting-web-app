@@ -208,12 +208,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="flex items-center gap-2">
           <FileSpreadsheet className="w-5 h-5 text-emerald-600 shrink-0" />
           <h2 className="text-sm sm:text-base font-bold text-slate-900">
-            import & export
+            Import/export
           </h2>
         </div>
-        <p className="text-xs text-slate-500 leading-relaxed">
-          Export your accounting records to formatted PDF reports or Google Sheets CSV, and backup/restore complete JSON archives.
-        </p>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 pt-1">
           {/* Export as PDF */}
@@ -282,15 +279,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         {/* Income Categories */}
         <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-3">
               <h3 className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                 Income Categories ({incomeCategories.length})
               </h3>
             </div>
-            <p className="text-xs text-slate-500 mb-3">
-              Extracted directly from the Google Sheet validation list.
-            </p>
 
             <form onSubmit={handleAddIncomeCategory} className="flex gap-2 mb-4">
               <input
@@ -332,15 +326,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         {/* Expense Categories */}
         <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-3">
               <h3 className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
                 Expense Categories ({expenseCategories.length})
               </h3>
             </div>
-            <p className="text-xs text-slate-500 mb-3">
-              Categories available when logging expense debits.
-            </p>
 
             <form onSubmit={handleAddExpenseCategory} className="flex gap-2 mb-4">
               <input
@@ -387,9 +378,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
             <h3 className="text-sm sm:text-base font-bold text-rose-900">Data Reset & Maintenance</h3>
           </div>
-          <p className="text-xs text-slate-500 leading-relaxed">
-            Permanently purge all offline database tables from this browser. Make sure to download a JSON backup before proceeding.
-          </p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 pt-3 border-t border-slate-100 mt-4">

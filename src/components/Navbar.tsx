@@ -36,8 +36,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   setActiveTab,
   onOpenNewTransaction,
   netBalance,
-  transactionCount,
-  projectCount,
   userProfile,
   onOpenProfile,
 }) => {
@@ -161,7 +159,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }`}
               >
                 <LayoutDashboard className="w-4 h-4 text-emerald-600" />
-                <span>Dashboard</span>
+                <span>Home</span>
               </button>
 
               <button
@@ -173,10 +171,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }`}
               >
                 <ReceiptText className="w-4 h-4 text-blue-600" />
-                <span>Transactions</span>
-                <span className="text-[11px] px-1.5 py-0.2 bg-slate-200 text-slate-700 rounded-full font-bold">
-                  {transactionCount}
-                </span>
+                <span>Ledger</span>
               </button>
 
               <button
@@ -188,10 +183,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }`}
               >
                 <FolderKanban className="w-4 h-4 text-indigo-600" />
-                <span>Projects</span>
-                <span className="text-[11px] px-1.5 py-0.2 bg-slate-200 text-slate-700 rounded-full font-bold">
-                  {projectCount}
-                </span>
+                <span>Project</span>
               </button>
 
               <button
@@ -203,7 +195,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }`}
               >
                 <BarChart3 className="w-4 h-4 text-amber-600" />
-                <span>Analytics</span>
+                <span>Insights</span>
               </button>
 
               <button
@@ -215,7 +207,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }`}
               >
                 <Settings className="w-4 h-4 text-slate-600" />
-                <span>Data & Backup</span>
+                <span>Settings</span>
               </button>
             </nav>
           </div>
@@ -252,11 +244,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className={`p-1 rounded-xl transition-all ${activeTab === 'transactions' ? 'bg-blue-50' : ''}`}>
               <ReceiptText className="w-5 h-5" />
             </div>
-            {transactionCount > 0 && (
-              <span className="absolute top-0.5 right-2 px-1 py-0.2 bg-blue-600 text-white rounded-full text-[9px] font-bold min-w-3.5 text-center leading-none">
-                {transactionCount > 99 ? '99+' : transactionCount}
-              </span>
-            )}
             <span className="text-[10px] tracking-tight">Ledger</span>
           </button>
 
@@ -272,12 +259,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className={`p-1 rounded-xl transition-all ${activeTab === 'projects' ? 'bg-indigo-50' : ''}`}>
               <FolderKanban className="w-5 h-5" />
             </div>
-            {projectCount > 0 && (
-              <span className="absolute top-0.5 right-2 px-1 py-0.2 bg-indigo-600 text-white rounded-full text-[9px] font-bold min-w-3.5 text-center leading-none">
-                {projectCount}
-              </span>
-            )}
-            <span className="text-[10px] tracking-tight">Projects</span>
+            <span className="text-[10px] tracking-tight">Project</span>
           </button>
 
           {/* Analytics */}
@@ -307,7 +289,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className={`p-1 rounded-xl transition-all ${activeTab === 'settings' ? 'bg-slate-100' : ''}`}>
               <Settings className="w-5 h-5" />
             </div>
-            <span className="text-[10px] tracking-tight">Backup</span>
+            <span className="text-[10px] tracking-tight">Settings</span>
           </button>
         </div>
       </nav>

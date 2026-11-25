@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Camera, Trash2, User, Check, Mail, Globe, ShieldCheck, LogOut } from 'lucide-react';
+import { X, Camera, Trash2, User, Check, Globe, ShieldCheck, LogOut } from 'lucide-react';
 import type { UserProfile } from '../utils/storage';
 import { useAuth } from '../context/AuthContext';
 
@@ -20,18 +20,15 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState(userProfile.name);
-  const [email, setEmail] = useState(userProfile.email || '');
   const [currency, setCurrency] = useState(userProfile.currency || 'INR');
   const [avatar, setAvatar] = useState<string | undefined>(userProfile.avatar);
 
   useEffect(() => {
     if (isOpen) {
       const googleName = user?.user_metadata?.full_name;
-      const googleEmail = user?.email;
       const googleAvatar = user?.user_metadata?.avatar_url;
 
       setName(googleName || userProfile.name);
-      setEmail(googleEmail || userProfile.email || '');
       setCurrency(userProfile.currency || 'INR');
       setAvatar(googleAvatar || userProfile.avatar);
     }
@@ -69,7 +66,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     e.preventDefault();
     onSaveProfile({
       name: name.trim() || 'User',
-      email: email.trim(),
+      email: user?.email || userProfile.email || '',
       currency,
       avatar,
     });
@@ -168,23 +165,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Nithin Devaraj"
-                className="w-full pl-9 pr-3 py-2.5 text-base sm:text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium"
-              />
-            </div>
-          </div>
-
-          {/* Email Address */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Email Address
-            </label>
-            <div className="relative">
-              <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com"
                 className="w-full pl-9 pr-3 py-2.5 text-base sm:text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium"
               />
             </div>

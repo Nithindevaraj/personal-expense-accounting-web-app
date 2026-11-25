@@ -1,0 +1,56 @@
+{
+  "protocol": "MAPai Nexus Protocol (MNP)",
+  "version": "1.0.0",
+  "project_name": "Personal expence web app",
+  "created_at": "01:03 AM, 24 November 2026",
+  "last_updated": "2:03 AM, 24 November 2026",
+  "active_sessions": {
+    "990beeba-4f35-4405-bd92-0d074c133d6f": {
+      "session_name": "MNP-Coordinator-Lead",
+      "status": "ACTIVE",
+      "role": "Orchestrator & Protocol Lead",
+      "task_objective": "Active Coordinator for multi-session synchronization & conflict prevention",
+      "branch": "master",
+      "locked_files": [],
+      "last_heartbeat": "01:03 AM, 24 November 2026"
+    }
+  },
+  "file_locks": {},
+  "architectural_invariants": {
+    "framework": "React (TypeScript) + Vite",
+    "styling": "Tailwind CSS + shadcn/ui principles",
+    "backend_and_database": "Supabase (client in supabase/ and src/)",
+    "responsive_parity": "Bidirectional Responsive Parity enforced (per .gemini/rules/bidirectional-responsive-parity.md)",
+    "cross_surface_parity": "Cross-Surface Parity & Anti-Redundancy Standard enforced (per .gemini/rules/cross-surface-parity-and-anti-redundancy.md)",
+    "single_source_of_truth": "All multi-conversation activity governed by .mapai/nexus_ledger.json"
+  },
+  "supersessions": [],
+  "conflicts": [],
+  "reconciliation_log": [
+    {
+      "timestamp": "01:03 AM, 24 November 2026",
+      "type": "INITIALIZATION",
+      "details": "MAPai Nexus Protocol (MNP) initialized. Coordinator session registered."
+    },
+    {
+      "timestamp": "1:02 AM, 24 November 2026",
+      "type": "RECONCILIATION_RUN",
+      "details": "Checked tree: 0 modified, 0 conflicts detected."
+    },
+    {
+      "timestamp": "1:02 AM, 24 November 2026",
+      "type": "RECONCILIATION_RUN",
+      "details": "Checked tree: 0 modified, 0 conflicts detected."
+    },
+    {
+      "timestamp": "1:03 AM, 24 November 2026",
+      "type": "RECONCILIATION_RUN",
+      "details": "Checked tree: 0 modified, 0 conflicts detected."
+    },
+    {
+      "timestamp": "2:03 AM, 24 November 2026",
+      "type": "RECONCILIATION_RUN",
+      "details": "Checked tree: 0 modified, 0 conflicts detected."
+    }
+  ]
+}

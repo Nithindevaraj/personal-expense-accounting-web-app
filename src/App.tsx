@@ -57,6 +57,15 @@ export const App: React.FC = () => {
   });
   const [transactions, setTransactions] = useState<Transaction[]>(getStoredTransactions);
   const [projects, setProjects] = useState<Project[]>(getStoredProjects);
+
+  const activeProjects = useMemo(() => {
+    const archivedParentIds = new Set(
+      projects.filter((p) => !p.parentId && p.completed).map((p) => p.id)
+    );
+    return projects.filter(
+      (p) => !p.completed && (!p.parentId || !archivedParentIds.has(p.parentId))
+    );
+  }, [projects]);
   const [incomeCategories, setIncomeCategories] = useState<string[]>(getStoredIncomeCategories);
   const [expenseCategories, setExpenseCategories] = useState<string[]>(getStoredExpenseCategories);
   const [userProfile, setUserProfile] = useState<UserProfile>(getUserProfile);
@@ -75,6 +84,7 @@ export const App: React.FC = () => {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [txLedgerFilter, setTxLedgerFilter] = useState<{
     tag?: string;
+    subTag?: string;
     type?: TransactionType;
   }>({});
 
@@ -257,7 +267,17 @@ export const App: React.FC = () => {
   };
 
   const handleDeleteProject = (id: string) => {
-    const updated = projects.filter((p) => p.id !== id);
+    const updated = projects.filter((p) => p.id !== id && p.parentId !== id);
+    setProjects(updated);
+    saveStoredProjects(updated);
+  };
+
+  const handleToggleProjectComplete = (id: string, completed: boolean) => {
+    const updated = projects.map((p) =>
+      p.id === id
+        ? { ...p, completed, completedAt: completed ? Date.now() : null }
+        : p
+    );
     setProjects(updated);
     saveStoredProjects(updated);
   };
@@ -265,6 +285,7 @@ export const App: React.FC = () => {
   // Cross-view Navigation
   const handleNavigateToTransactions = (filter?: {
     tag?: string;
+    subTag?: string;
     type?: TransactionType;
   }) => {
     if (filter) {
@@ -341,7 +362,7 @@ export const App: React.FC = () => {
         totalExpense={totalExpense}
         netBalance={netBalance}
         transactionCount={transactions.length}
-        projectCount={projects.length}
+        projectCount={activeProjects.filter((p) => !p.parentId).length}
         userProfile={userProfile}
         onOpenProfile={() => setIsProfileModalOpen(true)}
       />
@@ -359,7 +380,7 @@ export const App: React.FC = () => {
         {activeTab === 'dashboard' && (
           <DashboardView
             transactions={transactions}
-            projects={projects}
+            projects={activeProjects}
             onOpenNewTransaction={() => {
               setEditingTransaction(null);
               setIsTxModalOpen(true);
@@ -373,7 +394,7 @@ export const App: React.FC = () => {
         {activeTab === 'transactions' && (
           <TransactionsView
             transactions={transactions}
-            projects={projects}
+            projects={activeProjects}
             incomeCategories={incomeCategories}
             expenseCategories={expenseCategories}
             initialFilter={txLedgerFilter}
@@ -396,14 +417,15 @@ export const App: React.FC = () => {
             onAddProject={handleAddProject}
             onEditProject={handleEditProject}
             onDeleteProject={handleDeleteProject}
-            onViewProjectTransactions={(projectName) =>
-              handleNavigateToTransactions({ tag: projectName })
+            onToggleProjectComplete={handleToggleProjectComplete}
+            onViewProjectTransactions={(projectName, subProjectName) =>
+              handleNavigateToTransactions({ tag: projectName, subTag: subProjectName })
             }
           />
         )}
 
         {activeTab === 'analytics' && (
-          <AnalyticsView transactions={transactions} projects={projects} />
+          <AnalyticsView transactions={transactions} projects={activeProjects} />
         )}
 
         {activeTab === 'settings' && (
@@ -463,7 +485,7 @@ export const App: React.FC = () => {
         }}
         onSave={handleSaveTransaction}
         editingTransaction={editingTransaction}
-        projects={projects}
+        projects={activeProjects}
         incomeCategories={incomeCategories}
         expenseCategories={expenseCategories}
         nextSlNo={nextSlNo}

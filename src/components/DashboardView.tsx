@@ -150,9 +150,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       .sort((a, b) => b.value - a.value);
   }, [filteredTransactions]);
 
-  // Project P&L Summary (mirroring Projects sheet formula)
+  // Project P&L Summary (mirroring Projects sheet formula, rolled up to top-level projects)
   const projectSummaries = useMemo(() => {
-    return projects.map(p => {
+    return projects
+      .filter((p) => !p.parentId)
+      .map((p) => {
       let pIncome = 0;
       let pExpense = 0;
       let count = 0;
@@ -188,7 +190,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
         <div>
           <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
-            Financial Dashboard
+            Dashboard
           </h1>
         </div>
 
@@ -507,7 +509,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <table className="w-full text-left text-xs min-w-[280px]">
                 <thead>
                   <tr className="border-b border-slate-100 text-slate-400 uppercase tracking-wider font-semibold text-[10px]">
-                    <th className="pb-2">Project Tag</th>
+                    <th className="pb-2">Project</th>
                     <th className="pb-2 text-right">Income</th>
                     <th className="pb-2 text-right">Expense</th>
                     <th className="pb-2 text-right">Balance</th>

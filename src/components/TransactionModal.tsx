@@ -36,6 +36,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [amount, setAmount] = useState<string>('');
   const [category, setCategory] = useState<string>('');
   const [tag, setTag] = useState<string>('Project Alpha');
+  const [subTag, setSubTag] = useState<string | null>(null);
   const [description, setDescription] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
   const [attachments, setAttachments] = useState<string[]>([]);
@@ -49,16 +50,19 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setAmount(String(editingTransaction.amount));
       setCategory(editingTransaction.category);
       setTag(editingTransaction.tag);
+      setSubTag(editingTransaction.subTag || null);
       setDescription(editingTransaction.description || '');
       setNotes(editingTransaction.notes || '');
       setAttachments(editingTransaction.attachments || []);
       setSlNo(editingTransaction.slNo);
     } else {
+      const firstParent = projects.find((p) => !p.parentId) || projects[0];
       setType('Expense');
       setDate(getTodayString());
       setAmount('');
       setCategory(expenseCategories[0] || 'Miscellaneous');
-      setTag(projects[0]?.name || 'Project Alpha');
+      setTag(firstParent?.name || 'Project Alpha');
+      setSubTag(null);
       setDescription('');
       setNotes('');
       setAttachments([]);
@@ -119,6 +123,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         category: category || (type === 'Income' ? 'Monthly salary' : 'Food & Dining'),
         amount: parsedAmount,
         tag: tag || 'Project Alpha',
+        subTag: subTag || null,
         description: description.trim(),
         notes: notes.trim(),
         attachments,
@@ -237,19 +242,57 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Project Tag
+                Project
               </label>
               <select
                 required
-                value={tag}
-                onChange={(e) => setTag(e.target.value)}
+                value={subTag ? `${tag}:::${subTag}` : tag}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val.includes(':::')) {
+                    const [parentName, subName] = val.split(':::');
+                    setTag(parentName);
+                    setSubTag(subName);
+                  } else {
+                    setTag(val);
+                    setSubTag(null);
+                  }
+                }}
                 className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden font-semibold text-slate-800"
               >
-                {projects.map((p) => (
-                  <option key={p.id} value={p.name}>
-                    {p.name}
-                  </option>
-                ))}
+                {editingTransaction &&
+                  tag &&
+                  !projects.some((p) =>
+                    subTag
+                      ? p.parentId && p.name === subTag
+                      : !p.parentId && p.name === tag
+                  ) && (
+                    <option value={subTag ? `${tag}:::${subTag}` : tag}>
+                      {subTag ? `${tag} / ${subTag}` : tag} (Archived)
+                    </option>
+                  )}
+                {projects
+                  .filter((p) => !p.parentId)
+                  .map((p) => {
+                    const subs = projects.filter((s) => s.parentId === p.id);
+                    if (subs.length === 0) {
+                      return (
+                        <option key={p.id} value={p.name}>
+                          {p.name}
+                        </option>
+                      );
+                    }
+                    return (
+                      <optgroup key={p.id} label={p.name}>
+                        <option value={p.name}>{p.name}</option>
+                        {subs.map((sub) => (
+                          <option key={sub.id} value={`${p.name}:::${sub.name}`}>
+                            ↳ {sub.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    );
+                  })}
               </select>
             </div>
           </div>
@@ -273,10 +316,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             </select>
           </div>
 
-          {/* Description / Remarks */}
+          {/* Description */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Description or Remarks
+              Description
             </label>
             <input
               type="text"
