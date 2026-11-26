@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   LayoutDashboard,
   ReceiptText,
@@ -10,10 +10,18 @@ import {
   TrendingUp,
   TrendingDown,
   LogIn,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { formatINR } from '../utils/formatters';
 import type { UserProfile } from '../utils/storage';
 import { useAuth } from '../context/AuthContext';
+import {
+  applyTheme,
+  getStoredTheme,
+  getSystemPrefersDark,
+  type ThemePreference,
+} from '../utils/theme';
 
 export type ActiveTab = 'dashboard' | 'transactions' | 'projects' | 'analytics' | 'settings';
 
@@ -39,6 +47,40 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenProfile,
 }) => {
   const { user, signInWithGoogle } = useAuth();
+  const [theme, setTheme] = useState<ThemePreference>(() => getStoredTheme());
+  const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(() =>
+    getSystemPrefersDark()
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia?.('(prefers-color-scheme: dark)');
+    const handleMediaChange = (e: MediaQueryListEvent) => {
+      setSystemPrefersDark(e.matches);
+    };
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'color-scheme') {
+        const next = getStoredTheme();
+        setTheme(next);
+        applyTheme(next);
+      }
+    };
+    mq?.addEventListener('change', handleMediaChange);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      mq?.removeEventListener('change', handleMediaChange);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, []);
+
+  const isDark = theme === 'dark' || (theme === 'system' && systemPrefersDark);
+
+  const handleToggleTheme = () => {
+    const target: 'light' | 'dark' = isDark ? 'light' : 'dark';
+    const systemScheme: 'light' | 'dark' = systemPrefersDark ? 'dark' : 'light';
+    const nextPref: ThemePreference = target === systemScheme ? 'system' : target;
+    setTheme(nextPref);
+    applyTheme(nextPref);
+  };
 
   const userAvatar = user?.user_metadata?.avatar_url || userProfile.avatar;
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || userProfile.name || 'User';
@@ -113,6 +155,21 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 <Plus className="w-4 h-4 stroke-[2.5]" />
                 <span>Add Entry</span>
+              </button>
+
+              {/* Theme Toggle (Light / Dark) */}
+              <button
+                type="button"
+                onClick={handleToggleTheme}
+                className="p-1.5 sm:p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-all cursor-pointer shrink-0"
+                title={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+                aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+              >
+                {isDark ? (
+                  <Sun className="w-4 h-4 text-amber-500" />
+                ) : (
+                  <Moon className="w-4 h-4 text-slate-700" />
+                )}
               </button>
 
               {/* Sign In Button (when signed out) */}

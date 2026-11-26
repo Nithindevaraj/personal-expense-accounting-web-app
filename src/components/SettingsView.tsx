@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Download,
   Upload,
@@ -8,17 +8,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   FileText,
-  Sun,
-  Moon,
-  Monitor,
   RotateCcw,
 } from 'lucide-react';
-import {
-  applyTheme,
-  getStoredTheme,
-  getSystemPrefersDark,
-  type ThemePreference,
-} from '../utils/theme';
 import type { Project, Transaction } from '../types';
 import {
   type UserProfile,
@@ -64,35 +55,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [newIncomeCat, setNewIncomeCat] = useState('');
   const [newExpenseCat, setNewExpenseCat] = useState('');
   const [notification, setNotification] = useState<string | null>(null);
-  const [theme, setTheme] = useState<ThemePreference>(() => getStoredTheme());
-  const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(() =>
-    getSystemPrefersDark()
-  );
-
-  useEffect(() => {
-    const mq = window.matchMedia?.('(prefers-color-scheme: dark)');
-    const handleMediaChange = (e: MediaQueryListEvent) => {
-      setSystemPrefersDark(e.matches);
-    };
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === 'color-scheme') {
-        const next = getStoredTheme();
-        setTheme(next);
-        applyTheme(next);
-      }
-    };
-    mq?.addEventListener('change', handleMediaChange);
-    window.addEventListener('storage', handleStorage);
-    return () => {
-      mq?.removeEventListener('change', handleMediaChange);
-      window.removeEventListener('storage', handleStorage);
-    };
-  }, []);
-
-  const handleThemeChange = (nextTheme: ThemePreference) => {
-    setTheme(nextTheme);
-    applyTheme(nextTheme);
-  };
 
   const showNotification = (msg: string) => {
     setNotification(msg);
@@ -243,62 +205,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <span>{notification}</span>
         </div>
       )}
-
-      {/* Theme Card */}
-      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-        <div className="flex items-center gap-2">
-          <Monitor className="w-5 h-5 text-indigo-600 shrink-0" />
-          <h2 className="text-sm sm:text-base font-bold text-slate-900">
-            Theme
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
-          <button
-            type="button"
-            onClick={() => handleThemeChange('light')}
-            aria-pressed={theme === 'light'}
-            className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
-              theme === 'light'
-                ? 'bg-emerald-50 border-emerald-500 text-emerald-700 ring-1 ring-emerald-500/30'
-                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-            }`}
-          >
-            <Sun className="w-4 h-4 shrink-0" />
-            <span>Light</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleThemeChange('dark')}
-            aria-pressed={theme === 'dark'}
-            className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
-              theme === 'dark'
-                ? 'bg-indigo-50 border-indigo-500 text-indigo-700 ring-1 ring-indigo-500/30'
-                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-            }`}
-          >
-            <Moon className="w-4 h-4 shrink-0" />
-            <span>Dark</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleThemeChange('system')}
-            aria-pressed={theme === 'system'}
-            className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
-              theme === 'system'
-                ? 'bg-emerald-50 border-emerald-500 text-emerald-700 ring-1 ring-emerald-500/30'
-                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-            }`}
-          >
-            <Monitor className="w-4 h-4 shrink-0" />
-            <span>
-              System Default ({systemPrefersDark ? 'Currently dark' : 'Currently light'})
-            </span>
-          </button>
-        </div>
-      </div>
 
       {/* Import / Export Card */}
       <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3 sm:space-y-4">
@@ -505,7 +411,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 )
               ) {
                 onResetToDefaults();
-                setTheme('system');
                 showNotification('App reset to initial state');
               }
             }}
