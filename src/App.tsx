@@ -87,6 +87,30 @@ export const App: React.FC = () => {
       (p) => !p.completed && (!p.parentId || !archivedParentIds.has(p.parentId))
     );
   }, [projects]);
+
+  const activeTransactions = useMemo(() => {
+    const archivedParentNames = new Set(
+      projects.filter((p) => !p.parentId && p.completed).map((p) => p.name)
+    );
+    const parentById = new Map(projects.map((p) => [p.id, p]));
+    const archivedJobKeys = new Set(
+      projects
+        .filter((p) => p.parentId && p.completed)
+        .map((sub) => {
+          const parent = sub.parentId ? parentById.get(sub.parentId) : undefined;
+          return parent ? `${parent.name}:::${sub.name}` : '';
+        })
+        .filter(Boolean)
+    );
+    if (archivedParentNames.size === 0 && archivedJobKeys.size === 0) {
+      return transactions;
+    }
+    return transactions.filter((t) => {
+      if (archivedParentNames.has(t.tag)) return false;
+      if (t.subTag && archivedJobKeys.has(`${t.tag}:::${t.subTag}`)) return false;
+      return true;
+    });
+  }, [transactions, projects]);
   const [incomeCategories, setIncomeCategories] = useState<string[]>(getStoredIncomeCategories);
   const [expenseCategories, setExpenseCategories] = useState<string[]>(getStoredExpenseCategories);
   const [userProfile, setUserProfile] = useState<UserProfile>(getUserProfile);
@@ -590,7 +614,7 @@ export const App: React.FC = () => {
       <main className="grow max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-24 sm:pb-12">
         {activeTab === 'dashboard' && (
           <DashboardView
-            transactions={transactions}
+            transactions={activeTransactions}
             projects={activeProjects}
             onOpenNewTransaction={() => {
               setEditingTransaction(null);
