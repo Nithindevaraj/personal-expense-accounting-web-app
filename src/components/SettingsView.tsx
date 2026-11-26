@@ -11,6 +11,8 @@ import {
   RotateCcw,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
+  ArrowLeft,
   Repeat,
   Plus,
   FolderKanban,
@@ -84,6 +86,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [newIncomeCat, setNewIncomeCat] = useState('');
   const [newExpenseCat, setNewExpenseCat] = useState('');
   const [notification, setNotification] = useState<string | null>(null);
+  const [showRecurringPage, setShowRecurringPage] = useState(false);
   const [openSections, setOpenSections] = useState({
     importExport: false,
     incomeCats: false,
@@ -303,21 +306,30 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       )}
 
-      {/* Recurring Transactions Section (Full Page) */}
-      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-        <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
-          <div className="flex items-center gap-2">
-            <Repeat className="w-5 h-5 text-indigo-600 shrink-0" />
-            <h2 className="text-sm sm:text-base font-bold text-slate-900">
-              Recurring Transactions ({recurringTransactions.length})
-            </h2>
+      {showRecurringPage ? (
+        /* Recurring Transactions Full Page */
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+          <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowRecurringPage(false)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer transition-colors"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back</span>
+              </button>
+              <Repeat className="w-5 h-5 text-indigo-600 shrink-0" />
+              <h2 className="text-sm sm:text-base font-bold text-slate-900">
+                Recurring Transactions ({recurringTransactions.length})
+              </h2>
+            </div>
+            <span className="text-[11px] font-semibold text-slate-500">
+              Auto-generated monthly
+            </span>
           </div>
-          <span className="text-[11px] font-semibold text-slate-500">
-            Auto-generated monthly
-          </span>
-        </div>
 
-        <div className="space-y-4">
+          <div className="space-y-4">
             <form onSubmit={handleCreateRecurring} className="space-y-3 bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80">
               <div className="grid grid-cols-2 gap-2">
                 <button
@@ -551,9 +563,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
             )}
           </div>
-      </div>
+        </div>
+      ) : (
+        <>
+          {/* Recurring Transactions Navigation Card */}
+          <button
+            type="button"
+            onClick={() => setShowRecurringPage(true)}
+            className="w-full bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-2 text-left hover:bg-slate-50/70 transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <Repeat className="w-5 h-5 text-indigo-600 shrink-0" />
+              <h2 className="text-sm sm:text-base font-bold text-slate-900">
+                Recurring Transactions ({recurringTransactions.length})
+              </h2>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+          </button>
 
-      {/* Import / Export Card */}
+          {/* Import / Export Card */}
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
         <button
           type="button"
@@ -818,6 +846,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
         )}
       </div>
+        </>
+      )}
     </div>
   );
 };
