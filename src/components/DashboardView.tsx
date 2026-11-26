@@ -43,7 +43,6 @@ const CATEGORY_COLORS = [
 export const DashboardView: React.FC<DashboardViewProps> = ({
   transactions,
   projects,
-  onOpenNewTransaction,
   onNavigateToTransactions,
   onNavigateToProjects,
   onEditTransaction,
@@ -638,12 +637,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span className="text-[11px] sm:text-xs text-slate-400">
               Showing last {recentTransactions.length} of {transactions.length} entries
             </span>
-            <button
-              onClick={onOpenNewTransaction}
-              className="text-xs font-bold text-emerald-600 hover:text-emerald-800 cursor-pointer"
-            >
-              + Quick Add
-            </button>
           </div>
         </div>
       </div>
