@@ -47,7 +47,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigateToProjects,
   onEditTransaction,
 }) => {
-  const [timeRange, setTimeRange] = useState<'all' | 'this_year' | 'this_month' | 'last_30_days'>('all');
+  const [timeRange, setTimeRange] = useState<'all' | 'this_year' | 'this_month' | 'last_30_days'>('last_30_days');
 
   // Filtered transactions based on selected range
   const filteredTransactions = useMemo(() => {
@@ -195,46 +195,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         {/* Range Buttons (Smooth horizontal scroll on mobile) */}
         <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 overflow-x-auto no-scrollbar w-full sm:w-auto">
-          <button
-            onClick={() => setTimeRange('all')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer shrink-0 whitespace-nowrap ${
-              timeRange === 'all'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            All Time
-          </button>
-          <button
-            onClick={() => setTimeRange('this_year')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer shrink-0 whitespace-nowrap ${
-              timeRange === 'this_year'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            This Year
-          </button>
-          <button
-            onClick={() => setTimeRange('this_month')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer shrink-0 whitespace-nowrap ${
-              timeRange === 'this_month'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            This Month
-          </button>
-          <button
-            onClick={() => setTimeRange('last_30_days')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer shrink-0 whitespace-nowrap ${
-              timeRange === 'last_30_days'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Last 30 Days
-          </button>
+          {(
+            [
+              { key: 'last_30_days', label: 'Last 30 Days' },
+              { key: 'this_month', label: 'This Month' },
+              { key: 'this_year', label: 'This Year' },
+              { key: 'all', label: 'All Time' },
+            ] as const
+          ).map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setTimeRange(key)}
+              className={`px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-semibold rounded-lg transition-all cursor-pointer shrink-0 whitespace-nowrap ${
+                timeRange === key
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 
