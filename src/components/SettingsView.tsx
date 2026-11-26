@@ -9,6 +9,8 @@ import {
   AlertTriangle,
   FileText,
   RotateCcw,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import type { Project, Transaction } from '../types';
 import {
@@ -55,6 +57,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [newIncomeCat, setNewIncomeCat] = useState('');
   const [newExpenseCat, setNewExpenseCat] = useState('');
   const [notification, setNotification] = useState<string | null>(null);
+  const [openSections, setOpenSections] = useState({
+    importExport: false,
+    incomeCats: false,
+    expenseCats: false,
+    maintenance: false,
+  });
+
+  const toggleSection = (key: keyof typeof openSections) => {
+    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
   const showNotification = (msg: string) => {
     setNotification(msg);
@@ -207,15 +219,28 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       )}
 
       {/* Import / Export Card */}
-      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3 sm:space-y-4">
-        <div className="flex items-center gap-2">
-          <FileSpreadsheet className="w-5 h-5 text-emerald-600 shrink-0" />
-          <h2 className="text-sm sm:text-base font-bold text-slate-900">
-            Import/export
-          </h2>
-        </div>
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
+        <button
+          type="button"
+          onClick={() => toggleSection('importExport')}
+          aria-expanded={openSections.importExport}
+          className="w-full flex items-center justify-between gap-2 text-left cursor-pointer"
+        >
+          <div className="flex items-center gap-2">
+            <FileSpreadsheet className="w-5 h-5 text-emerald-600 shrink-0" />
+            <h2 className="text-sm sm:text-base font-bold text-slate-900">
+              Import/export
+            </h2>
+          </div>
+          {openSections.importExport ? (
+            <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+          )}
+        </button>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 pt-1">
+        {openSections.importExport && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 pt-4 mt-3 border-t border-slate-100">
           {/* Export as PDF */}
           <button
             onClick={handleExportPDF}
@@ -275,20 +300,32 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             className="hidden"
           />
         </div>
+        )}
       </div>
 
       {/* Categories Management */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 items-start">
         {/* Income Categories */}
-        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                Income Categories ({incomeCategories.length})
-              </h3>
-            </div>
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
+          <button
+            type="button"
+            onClick={() => toggleSection('incomeCats')}
+            aria-expanded={openSections.incomeCats}
+            className="w-full flex items-center justify-between gap-2 text-left cursor-pointer"
+          >
+            <h3 className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+              Income Categories ({incomeCategories.length})
+            </h3>
+            {openSections.incomeCats ? (
+              <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+            )}
+          </button>
 
+          {openSections.incomeCats && (
+          <div className="pt-4 mt-3 border-t border-slate-100">
             <form onSubmit={handleAddIncomeCategory} className="flex gap-2 mb-4">
               <input
                 type="text"
@@ -324,18 +361,30 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               ))}
             </div>
           </div>
+          )}
         </div>
 
         {/* Expense Categories */}
-        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-                Expense Categories ({expenseCategories.length})
-              </h3>
-            </div>
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
+          <button
+            type="button"
+            onClick={() => toggleSection('expenseCats')}
+            aria-expanded={openSections.expenseCats}
+            className="w-full flex items-center justify-between gap-2 text-left cursor-pointer"
+          >
+            <h3 className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+              Expense Categories ({expenseCategories.length})
+            </h3>
+            {openSections.expenseCats ? (
+              <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+            )}
+          </button>
 
+          {openSections.expenseCats && (
+          <div className="pt-4 mt-3 border-t border-slate-100">
             <form onSubmit={handleAddExpenseCategory} className="flex gap-2 mb-4">
               <input
                 type="text"
@@ -371,19 +420,31 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               ))}
             </div>
           </div>
+          )}
         </div>
       </div>
 
       {/* Data Reset & Maintenance */}
-      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-rose-200 shadow-xs flex flex-col justify-between">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-rose-200 shadow-xs">
+        <button
+          type="button"
+          onClick={() => toggleSection('maintenance')}
+          aria-expanded={openSections.maintenance}
+          className="w-full flex items-center justify-between gap-2 text-left cursor-pointer"
+        >
+          <div className="flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
             <h3 className="text-sm sm:text-base font-bold text-rose-900">Data Reset & Maintenance</h3>
           </div>
-        </div>
+          {openSections.maintenance ? (
+            <ChevronUp className="w-4 h-4 text-rose-400 shrink-0" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-rose-400 shrink-0" />
+          )}
+        </button>
 
-        <div className="flex flex-col sm:flex-row gap-3 pt-3 border-t border-slate-100 mt-4">
+        {openSections.maintenance && (
+        <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-100 mt-3">
           <button
             type="button"
             onClick={() => {
@@ -420,6 +481,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <span>Reset</span>
           </button>
         </div>
+        )}
       </div>
     </div>
   );
