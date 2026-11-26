@@ -36,7 +36,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [date, setDate] = useState<string>(getTodayString());
   const [amount, setAmount] = useState<string>('');
   const [category, setCategory] = useState<string>('');
-  const [tag, setTag] = useState<string>('Project Alpha');
+  const [tag, setTag] = useState<string>('General Transactions');
   const [subTag, setSubTag] = useState<string | null>(null);
   const [description, setDescription] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
@@ -63,7 +63,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setDate(getTodayString());
       setAmount('');
       setCategory(expenseCategories[0] || 'Food');
-      setTag(firstParent?.name || 'Project Alpha');
+      setTag(firstParent?.name || 'General Transactions');
       setSubTag(null);
       setDescription('');
       setNotes('');
@@ -175,7 +175,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         type,
         category: category || (type === 'Income' ? 'Salary' : 'Food'),
         amount: parsedAmount,
-        tag: tag || 'Project Alpha',
+        tag: tag || 'General Transactions',
         subTag: subTag || null,
         description: description.trim(),
         notes: notes.trim(),

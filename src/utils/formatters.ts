@@ -135,7 +135,7 @@ export function parseCSVToTransactions(csvContent: string): Partial<Transaction>
     const type = typeRaw.includes('income') ? 'Income' : 'Expense';
     const category = cols[3] ? cols[3].trim() : 'Purchase';
     const amount = parseFloat(cols[4]?.replace(/[₹,$\s]/g, '') || '0') || 0;
-    const tag = cols[5] ? cols[5].trim() : 'Project Alpha';
+    const tag = cols[5] ? cols[5].trim() : 'General Transactions';
     const description = cols[6] ? cols[6].trim() : '';
     const attachments = cols[7] ? cols[7].split(';').map(s => s.trim()).filter(Boolean) : [];
     const notes = cols[8] ? cols[8].trim() : '';
@@ -222,7 +222,7 @@ export function exportTransactionsToPDF(
         </span>
       </td>
       <td><strong>${escapeHtml(t.category || '-')}</strong></td>
-      <td><span class="tag">${escapeHtml(t.tag || 'Personal')}</span></td>
+      <td><span class="tag">${escapeHtml(t.tag || 'General Transactions')}</span></td>
       <td>${escapeHtml(t.description || '-')}</td>
       <td style="text-align: right; font-weight: bold; color: ${
         t.type === 'Income' ? '#059669' : '#e11d48'

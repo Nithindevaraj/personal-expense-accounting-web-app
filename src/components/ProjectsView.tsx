@@ -18,7 +18,7 @@ import {
   Archive,
   RotateCcw,
 } from 'lucide-react';
-import type { Project, Transaction } from '../types';
+import { isGeneralProject, type Project, type Transaction } from '../types';
 import { formatINR } from '../utils/formatters';
 
 interface ProjectsViewProps {
@@ -503,19 +503,21 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                   </div>
 
                   <div className="flex items-center gap-1.5 opacity-80 group-hover:opacity-100">
-                    <label
-                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md hover:bg-emerald-50 text-[11px] font-semibold text-slate-500 hover:text-emerald-700 cursor-pointer select-none transition-colors"
-                      title="Mark completed and move to Archive"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={Boolean(p.completed)}
-                        onChange={(e) => onToggleProjectComplete(p.id, e.target.checked)}
-                        className="w-3.5 h-3.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
-                        aria-label={`Mark ${p.name} as completed`}
-                      />
-                      <span>Done</span>
-                    </label>
+                    {!isGeneralProject(p) && (
+                      <label
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md hover:bg-emerald-50 text-[11px] font-semibold text-slate-500 hover:text-emerald-700 cursor-pointer select-none transition-colors"
+                        title="Mark completed and move to Archive"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={Boolean(p.completed)}
+                          onChange={(e) => onToggleProjectComplete(p.id, e.target.checked)}
+                          className="w-3.5 h-3.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
+                          aria-label={`Mark ${p.name} as completed`}
+                        />
+                        <span>Done</span>
+                      </label>
+                    )}
                     <button
                       onClick={() => handleOpenEdit(p)}
                       className="p-1 hover:bg-slate-100 rounded-md text-slate-400 hover:text-slate-700 cursor-pointer"
@@ -523,7 +525,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
-                    {activeTopLevelProjects.length > 1 && (
+                    {!isGeneralProject(p) && activeTopLevelProjects.length > 1 && (
                       <button
                         onClick={() => {
                           if (

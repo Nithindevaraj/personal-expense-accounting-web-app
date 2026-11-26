@@ -53,38 +53,44 @@ export const DEFAULT_EXPENSE_CATEGORIES: string[] = [
   'Lends Returning',
 ];
 
-// Default Project Tags from the Google Sheet
+export const GENERAL_PROJECT_ID = 'proj-general';
+export const GENERAL_PROJECT_NAME = 'General Transactions';
+
+export function isGeneralProject(project: Pick<Project, 'id' | 'name'>): boolean {
+  return project.id === GENERAL_PROJECT_ID || project.name === GENERAL_PROJECT_NAME;
+}
+
 export const DEFAULT_PROJECTS: Project[] = [
   {
-    id: 'proj-alpha',
-    name: 'Project Alpha',
-    description: 'Primary software engineering project & client deliverables',
-    budget: 150000,
-    color: '#3b82f6', // blue
+    id: GENERAL_PROJECT_ID,
+    name: GENERAL_PROJECT_NAME,
+    description: 'General income and expense transactions',
+    color: '#64748b',
+    createdAt: Date.now() - 60 * 86400000,
+  },
+  {
+    id: 'proj-demo-1',
+    name: 'Demo project 1',
+    description: 'u can edit the project name or delete it',
+    budget: 50000,
+    color: '#3b82f6',
     createdAt: Date.now() - 30 * 86400000,
   },
   {
-    id: 'proj-beta',
-    name: 'Project Beta',
-    description: 'Hardware prototype research & development',
-    budget: 75000,
-    color: '#10b981', // emerald
+    id: 'proj-demo-job-1',
+    parentId: 'proj-demo-1',
+    name: 'demo Job 1',
+    description: 'each projects can have sub tasks or job',
+    budget: 20000,
+    color: '#3b82f6',
+    createdAt: Date.now() - 25 * 86400000,
+  },
+  {
+    id: 'proj-demo-2',
+    name: 'demo project 2',
+    description: 'Projects can be archived if done and their transactions will not reflect in dashboard',
+    budget: 30000,
+    color: '#10b981',
     createdAt: Date.now() - 20 * 86400000,
-  },
-  {
-    id: 'proj-gamma',
-    name: 'Project Gamma',
-    description: 'Personal media studio & content creation',
-    budget: 50000,
-    color: '#8b5cf6', // purple
-    createdAt: Date.now() - 10 * 86400000,
-  },
-  {
-    id: 'proj-personal',
-    name: 'Personal',
-    description: 'General household and individual living expenses',
-    budget: 40000,
-    color: '#f59e0b', // amber
-    createdAt: Date.now() - 60 * 86400000,
   },
 ];

@@ -5,6 +5,7 @@ import {
   DEFAULT_EXPENSE_CATEGORIES,
   DEFAULT_INCOME_CATEGORIES,
   DEFAULT_PROJECTS,
+  isGeneralProject,
 } from './types';
 import {
   type UserProfile,
@@ -384,6 +385,7 @@ export const App: React.FC = () => {
 
   const handleDeleteProject = (id: string) => {
     const target = projects.find((p) => p.id === id);
+    if (target && isGeneralProject(target)) return;
     if (target) {
       const parentProject = target.parentId
         ? projects.find((p) => p.id === target.parentId)
@@ -430,7 +432,7 @@ export const App: React.FC = () => {
   const handleToggleProjectComplete = (id: string, completed: boolean) => {
     setProjects((prev) => {
       const updated = prev.map((p) => {
-        if (p.id !== id) return p;
+        if (p.id !== id || isGeneralProject(p)) return p;
         const nextProj = { ...p, completed, completedAt: completed ? Date.now() : null };
         void upsertProjectToSupabase(nextProj);
         return nextProj;
