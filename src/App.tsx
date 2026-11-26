@@ -2,18 +2,26 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, Loader2 } from 'lucide-react';
 import type { Project, Transaction, TransactionType } from './types';
 import {
+  DEFAULT_EXPENSE_CATEGORIES,
+  DEFAULT_INCOME_CATEGORIES,
+  DEFAULT_PROJECTS,
+} from './types';
+import {
   type UserProfile,
+  DEFAULT_USER_PROFILE,
   getStoredExpenseCategories,
   getStoredIncomeCategories,
   getStoredProjects,
   getStoredTransactions,
   getUserProfile,
+  resetToDefaults,
   saveStoredExpenseCategories,
   saveStoredIncomeCategories,
   saveStoredProjects,
   saveStoredTransactions,
   saveUserProfile,
 } from './utils/storage';
+import { applyTheme } from './utils/theme';
 import { Navbar, type ActiveTab } from './components/Navbar';
 import { DashboardView } from './components/DashboardView';
 import { TransactionsView } from './components/TransactionsView';
@@ -483,6 +491,48 @@ export const App: React.FC = () => {
     saveStoredTransactions([]);
   };
 
+  const handleResetToDefaults = async () => {
+    const prevTxIds = transactions.map((t) => t.id);
+    const prevProjectIds = projects.map((p) => p.id);
+
+    resetToDefaults();
+    applyTheme('system');
+    setTransactions([]);
+    setProjects(DEFAULT_PROJECTS);
+    setIncomeCategories(DEFAULT_INCOME_CATEGORIES);
+    setExpenseCategories(DEFAULT_EXPENSE_CATEGORIES);
+    setUserProfile(
+      user
+        ? {
+            ...DEFAULT_USER_PROFILE,
+            name: user.user_metadata?.full_name || DEFAULT_USER_PROFILE.name,
+            email: user.email || DEFAULT_USER_PROFILE.email,
+            avatar: user.user_metadata?.avatar_url,
+          }
+        : DEFAULT_USER_PROFILE
+    );
+
+    if (user && isSupabaseConfigured) {
+      try {
+        if (prevTxIds.length > 0) {
+          await batchDeleteExpenses(prevTxIds);
+        }
+        for (const pid of prevProjectIds) {
+          await deleteProjectFromSupabase(pid);
+        }
+        for (const proj of DEFAULT_PROJECTS) {
+          await upsertProjectToSupabase(proj);
+        }
+        await saveCategoriesToSupabase({
+          incomeCategories: DEFAULT_INCOME_CATEGORIES,
+          expenseCategories: DEFAULT_EXPENSE_CATEGORIES,
+        });
+      } catch (err) {
+        console.error('Error resetting cloud data to defaults:', err);
+      }
+    }
+  };
+
   // Auth Gate: Loading State
   if (isAuthLoading) {
     return (
@@ -601,6 +651,7 @@ export const App: React.FC = () => {
             }}
             onImportTransactions={handleImportTransactions}
             onClearAllData={handleClearAllData}
+            onResetToDefaults={handleResetToDefaults}
           />
         )}
       </main>

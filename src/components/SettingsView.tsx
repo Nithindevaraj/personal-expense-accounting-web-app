@@ -11,6 +11,7 @@ import {
   Sun,
   Moon,
   Monitor,
+  RotateCcw,
 } from 'lucide-react';
 import {
   applyTheme,
@@ -41,6 +42,7 @@ interface SettingsViewProps {
   onUpdateUserProfile: (profile: UserProfile) => void;
   onImportTransactions: (imported: Transaction[]) => void;
   onClearAllData: () => void;
+  onResetToDefaults: () => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -54,6 +56,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onUpdateUserProfile,
   onImportTransactions,
   onClearAllData,
+  onResetToDefaults,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
@@ -491,6 +494,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           >
             <Trash2 className="w-4 h-4 shrink-0" />
             <span>Clear All Data</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (
+                window.confirm(
+                  'Reset the app (transactions, projects, categories, and theme) back to its initial default state? This cannot be undone.'
+                )
+              ) {
+                onResetToDefaults();
+                setTheme('system');
+                showNotification('App reset to initial state');
+              }
+            }}
+            className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-semibold transition-all cursor-pointer"
+          >
+            <RotateCcw className="w-4 h-4 shrink-0" />
+            <span>Reset</span>
           </button>
         </div>
       </div>
