@@ -9,7 +9,6 @@ import {
   Wallet,
   TrendingUp,
   TrendingDown,
-  LogOut,
   LogIn,
 } from 'lucide-react';
 import { formatINR } from '../utils/formatters';
@@ -39,7 +38,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   userProfile,
   onOpenProfile,
 }) => {
-  const { user, signOut, signInWithGoogle } = useAuth();
+  const { user, signInWithGoogle } = useAuth();
 
   const userAvatar = user?.user_metadata?.avatar_url || userProfile.avatar;
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || userProfile.name || 'User';
@@ -110,28 +109,14 @@ export const Navbar: React.FC<NavbarProps> = ({
 
               <button
                 onClick={onOpenNewTransaction}
-                className="flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-semibold text-xs sm:text-sm shadow-sm shadow-emerald-600/30 transition-all cursor-pointer shrink-0"
+                className="hidden sm:flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-semibold text-sm shadow-sm shadow-emerald-600/30 transition-all cursor-pointer shrink-0"
               >
                 <Plus className="w-4 h-4 stroke-[2.5]" />
-                <span className="hidden sm:inline">Add Entry</span>
+                <span>Add Entry</span>
               </button>
 
-              {/* Sign In / Sign Out Button */}
-              {user ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (confirm(`Sign out from ${user.email}?`)) {
-                      signOut();
-                    }
-                  }}
-                  className="p-1.5 sm:px-2.5 sm:py-2 rounded-xl border border-slate-200 hover:bg-rose-50 hover:border-rose-200 text-slate-600 hover:text-rose-600 font-medium text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
-                  title={`Signed in as ${user.email} - Click to Sign Out`}
-                >
-                  <LogOut className="w-4 h-4 text-slate-500 hover:text-rose-600" />
-                  <span className="hidden md:inline">Sign Out</span>
-                </button>
-              ) : (
+              {/* Sign In Button (when signed out) */}
+              {!user && (
                 <button
                   type="button"
                   onClick={signInWithGoogle}

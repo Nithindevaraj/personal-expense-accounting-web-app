@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useId } from 'react';
 import {
   X,
   Paperclip,
   ArrowDownRight,
   ArrowUpRight,
+  FileText,
 } from 'lucide-react';
 import type { Project, Transaction, TransactionType } from '../types';
 import { formatINR, getTodayString } from '../utils/formatters';
@@ -29,7 +30,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   expenseCategories,
   nextSlNo,
 }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputId = useId();
 
   const [type, setType] = useState<TransactionType>('Expense');
   const [date, setDate] = useState<string>(getTodayString());
@@ -42,8 +43,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [attachments, setAttachments] = useState<string[]>([]);
   const [slNo, setSlNo] = useState<number>(nextSlNo);
 
-  // Sync state when editing or opening modal
+  // Sync state ONLY when opening modal or switching edited transaction (never wipe form on background sync)
   useEffect(() => {
+    if (!isOpen) return;
     if (editingTransaction) {
       setType(editingTransaction.type);
       setDate(editingTransaction.date);
@@ -68,7 +70,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setAttachments([]);
       setSlNo(nextSlNo);
     }
-  }, [editingTransaction, isOpen, nextSlNo, projects, expenseCategories]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingTransaction, isOpen]);
 
   // When type toggles, reset category to first in that list if not valid
   const handleTypeChange = (newType: TransactionType) => {
@@ -84,21 +87,71 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     }
   };
 
-  // Handle Attachment upload
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle Attachment upload (with automatic image compression for mobile/camera photos)
+  const readFileAsDataURL = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+
+  const compressImageFile = async (file: File): Promise<string> => {
+    const rawDataUrl = await readFileAsDataURL(file);
+    if (file.size <= 350 * 1024) return rawDataUrl;
+
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 1400;
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          const scale = Math.min(maxDim / width, maxDim / height);
+          width = Math.round(width * scale);
+          height = Math.round(height * scale);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(rawDataUrl);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.78));
+      };
+      img.onerror = () => resolve(rawDataUrl);
+      img.src = rawDataUrl;
+    });
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
+    const uploaded: string[] = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const reader = new FileReader();
-      reader.onload = (uploadEvent) => {
-        const base64 = uploadEvent.target?.result as string;
-        if (base64) {
-          setAttachments((prev) => [...prev, base64]);
+      try {
+        if (file.type.startsWith('image/')) {
+          const compressed = await compressImageFile(file);
+          if (compressed) uploaded.push(compressed);
+        } else {
+          if (file.size > 3 * 1024 * 1024) {
+            alert(`"${file.name}" is larger than 3 MB. Please choose a smaller PDF.`);
+            continue;
+          }
+          const dataUrl = await readFileAsDataURL(file);
+          if (dataUrl) uploaded.push(dataUrl);
         }
-      };
-      reader.readAsDataURL(file);
+      } catch (err) {
+        console.error('Failed to read attachment:', err);
+      }
+    }
+
+    if (uploaded.length > 0) {
+      setAttachments((prev) => [...prev, ...uploaded]);
     }
     e.target.value = '';
   };
@@ -145,9 +198,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-xs px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-bold">
-                Sl.No #{editingTransaction ? slNo : nextSlNo}
-              </span>
               <h2 className="text-base sm:text-lg font-bold text-slate-900">
                 {editingTransaction ? 'Edit Transaction' : 'Record New Transaction'}
               </h2>
@@ -350,43 +400,52 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               <label className="block text-xs font-semibold text-slate-700">
                 Receipts & Attachments
               </label>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
+              <label
+                htmlFor={fileInputId}
                 className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer py-1"
               >
                 <Paperclip className="w-3.5 h-3.5" />
                 <span>Upload Bill/Receipt</span>
-              </button>
+              </label>
               <input
+                id={fileInputId}
                 type="file"
-                ref={fileInputRef}
                 onChange={handleFileUpload}
-                accept="image/*,.pdf"
+                accept="image/*,.pdf,application/pdf"
                 multiple
-                className="hidden"
+                className="sr-only"
               />
             </div>
 
             {attachments.length > 0 && (
               <div className="flex flex-wrap gap-2 p-2 bg-slate-50 rounded-xl border border-slate-200">
-                {attachments.map((att, idx) => (
-                  <div key={idx} className="relative group">
-                    <img
-                      src={att}
-                      alt="receipt"
-                      className="w-14 h-14 object-cover rounded-lg border border-slate-200"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveAttachment(idx)}
-                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center text-[10px] shadow-sm hover:scale-110 transition-transform cursor-pointer"
-                      aria-label="Remove receipt"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
+                {attachments.map((att, idx) => {
+                  const isPdf = att.startsWith('data:application/pdf');
+                  return (
+                    <div key={idx} className="relative group">
+                      {isPdf ? (
+                        <div className="w-14 h-14 rounded-lg border border-slate-200 bg-white flex flex-col items-center justify-center text-rose-600">
+                          <FileText className="w-5 h-5" />
+                          <span className="text-[9px] font-bold uppercase mt-0.5">PDF</span>
+                        </div>
+                      ) : (
+                        <img
+                          src={att}
+                          alt="receipt"
+                          className="w-14 h-14 object-cover rounded-lg border border-slate-200"
+                        />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveAttachment(idx)}
+                        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center text-[10px] shadow-sm hover:scale-110 transition-transform cursor-pointer"
+                        aria-label="Remove receipt"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

@@ -602,15 +602,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       )}
                     </div>
                     <div className="min-w-0">
-                      <div className="text-xs font-bold text-slate-900 truncate max-w-[120px] xs:max-w-[180px] sm:max-w-[240px]">
-                        {t.description || t.category}
+                      <div className="text-xs font-bold text-slate-900 truncate max-w-[140px] xs:max-w-[200px] sm:max-w-[260px]">
+                        {t.tag}
                       </div>
+                      {t.subTag && (
+                        <div className="text-[11px] font-semibold text-indigo-700 truncate max-w-[140px] xs:max-w-[200px] sm:max-w-[260px]">
+                          {t.subTag}
+                        </div>
+                      )}
                       <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-slate-500">
                         <span>{formatDate(t.date)}</span>
-                        <span>•</span>
-                        <span className="bg-white/80 px-1 py-0.1 rounded-md border border-slate-200/60 font-medium truncate max-w-[80px]">
-                          {t.tag}
-                        </span>
                       </div>
                     </div>
                   </div>

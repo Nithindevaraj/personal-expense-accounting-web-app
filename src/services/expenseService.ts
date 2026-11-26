@@ -65,6 +65,22 @@ export async function getExpenses(): Promise<Transaction[]> {
     return getStoredTransactions();
   }
 
+  // Push any unsynced local transactions (e.g. from offline/failed writes) to Supabase first
+  const localTxs = getStoredTransactions();
+  const pendingLocal = localTxs.filter(
+    (t) => t.id.startsWith('tx-temp-') || t.id.startsWith('tx-')
+  );
+  if (pendingLocal.length > 0) {
+    for (const pending of pendingLocal) {
+      try {
+        const { id: _id, createdAt: _createdAt, ...payload } = pending;
+        await addExpense(payload);
+      } catch (err) {
+        console.warn('Could not sync pending local transaction:', err);
+      }
+    }
+  }
+
   const { data, error } = await supabase
     .from('expenses')
     .select('*')
@@ -103,11 +119,22 @@ export async function addExpense(
 
   const payload = mapTransactionToPayload(txData);
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('expenses')
     .insert([payload])
     .select()
     .single();
+
+  if (error && error.message.toLowerCase().includes('sub_tag')) {
+    const { sub_tag: _ignored, ...fallbackPayload } = payload;
+    const retry = await supabase
+      .from('expenses')
+      .insert([fallbackPayload])
+      .select()
+      .single();
+    data = retry.data;
+    error = retry.error;
+  }
 
   if (error) {
     console.error('Failed to add expense to Supabase:', error.message);
@@ -143,12 +170,24 @@ export async function updateExpense(
   if (updates.notes !== undefined) payload.notes = updates.notes;
   if (updates.attachments !== undefined) payload.attachments = updates.attachments;
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('expenses')
     .update(payload)
     .eq('id', id)
     .select()
     .single();
+
+  if (error && error.message.toLowerCase().includes('sub_tag')) {
+    const { sub_tag: _ignored, ...fallbackPayload } = payload;
+    const retry = await supabase
+      .from('expenses')
+      .update(fallbackPayload)
+      .eq('id', id)
+      .select()
+      .single();
+    data = retry.data;
+    error = retry.error;
+  }
 
   if (error) {
     console.error('Failed to update expense in Supabase:', error.message);

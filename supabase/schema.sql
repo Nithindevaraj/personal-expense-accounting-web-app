@@ -155,3 +155,11 @@ CREATE TRIGGER trigger_expenses_updated_at
     BEFORE UPDATE ON public.expenses
     FOR EACH ROW
     EXECUTE FUNCTION public.handle_updated_at();
+
+-- ==============================================================================
+-- 8. TABLE GRANTS FOR AUTHENTICATED USERS (Required alongside RLS)
+-- ==============================================================================
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.expenses TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.projects TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.user_settings TO authenticated;

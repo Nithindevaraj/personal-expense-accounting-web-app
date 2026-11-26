@@ -32,7 +32,7 @@ interface TransactionsViewProps {
   onDeleteTransaction: (id: string) => void;
   onBatchDeleteTransactions: (ids: string[]) => void;
   onDuplicateTransaction: (t: Transaction) => void;
-  onViewAttachment: (attachmentUrl: string, title: string) => void;
+  onViewAttachment: (attachments: string[], title: string) => void;
 }
 
 export const TransactionsView: React.FC<TransactionsViewProps> = ({
@@ -589,22 +589,23 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                     </span>
                   </div>
 
-                  {/* Card Middle: Description & Amount */}
+                  {/* Card Middle: Project.Job & Amount */}
                   <div
                     className="flex items-start justify-between gap-3 my-1 cursor-pointer"
                     onClick={() => onEditTransaction(t)}
                   >
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-bold text-slate-900 leading-snug break-words">
-                        {t.description || t.category}
+                        {t.tag}
                       </div>
+                      {t.subTag && (
+                        <div className="text-xs font-semibold text-indigo-700 leading-snug break-words">
+                          {t.subTag}
+                        </div>
+                      )}
                       <div className="flex items-center gap-1.5 flex-wrap mt-1">
                         <span className="text-xs font-semibold text-slate-700 bg-white px-2 py-0.5 rounded-md border border-slate-200 shadow-2xs">
                           {t.category}
-                        </span>
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-200/60">
-                          <Tag className="w-3 h-3 text-indigo-600" />
-                          {t.subTag ? `${t.tag} / ${t.subTag}` : t.tag}
                         </span>
                       </div>
                     </div>
@@ -621,10 +622,10 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Card Notes (if any) */}
-                  {t.notes && (
+                  {/* Card Description (if any) */}
+                  {t.description && (
                     <p className="text-xs text-slate-500 mt-2 pt-2 border-t border-slate-200/60 italic line-clamp-2">
-                      {t.notes}
+                      {t.description}
                     </p>
                   )}
 
@@ -636,7 +637,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                           type="button"
                           onClick={() =>
                             onViewAttachment(
-                              t.attachments![0],
+                              t.attachments!,
                               `${t.description || t.category} Receipt`
                             )
                           }
@@ -766,7 +767,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                   </th>
 
                   <th className="p-3 w-32">Projects</th>
-                  <th className="p-3 w-32">Sub-project</th>
+                  <th className="p-3 w-32">Jobs</th>
                   <th className="p-3 min-w-[180px]">Description</th>
                   <th className="p-3 w-24 text-center">Attachments</th>
                   <th className="p-3 min-w-[150px]">Notes</th>
@@ -880,7 +881,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                               type="button"
                               onClick={() =>
                                 onViewAttachment(
-                                  t.attachments![0],
+                                  t.attachments!,
                                   `${t.description || t.category} Receipt`
                                 )
                               }

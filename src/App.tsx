@@ -27,6 +27,7 @@ import { InstallModal } from './components/InstallModal';
 import { InstallBanner } from './components/InstallBanner';
 import { useAuth } from './context/AuthContext';
 import { LoginView } from './components/LoginView';
+import { supabase, isSupabaseConfigured } from './lib/supabase';
 import {
   getExpenses,
   addExpense,
@@ -34,6 +35,15 @@ import {
   deleteExpense,
   batchDeleteExpenses,
 } from './services/expenseService';
+import {
+  getProjectsFromSupabase,
+  upsertProjectToSupabase,
+  deleteProjectFromSupabase,
+} from './services/projectService';
+import {
+  getCategoriesFromSupabase,
+  saveCategoriesToSupabase,
+} from './services/userSettingsService';
 
 export const App: React.FC = () => {
   const { user, isLoading: isAuthLoading, offlineDemoMode } = useAuth();
@@ -90,11 +100,11 @@ export const App: React.FC = () => {
 
   const [attachmentModal, setAttachmentModal] = useState<{
     isOpen: boolean;
-    url: string | null;
+    attachments: string[];
     title: string;
   }>({
     isOpen: false,
-    url: null,
+    attachments: [],
     title: '',
   });
 
@@ -137,29 +147,119 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isTxModalOpen]);
 
-  // Fetch user expenses from Supabase when authenticated
+  // Fetch user expenses & projects from Supabase when authenticated, plus Realtime & tab-focus sync
   useEffect(() => {
-    if (user) {
-      setIsDataLoading(true);
-      getExpenses()
-        .then((fetched) => {
-          setTransactions(fetched);
+    if (!user) return;
+
+    let isMounted = true;
+
+    const syncFromCloud = (showLoader = false) => {
+      if (showLoader) setIsDataLoading(true);
+      Promise.all([
+        getExpenses(),
+        getProjectsFromSupabase(),
+        getCategoriesFromSupabase(),
+      ])
+        .then(([fetchedTx, fetchedProjects, fetchedCats]) => {
+          if (!isMounted) return;
+          setTransactions(fetchedTx);
+          setProjects(fetchedProjects);
+          setIncomeCategories(fetchedCats.incomeCategories);
+          setExpenseCategories(fetchedCats.expenseCategories);
         })
         .catch((err) => {
-          console.error('Error fetching expenses from Supabase:', err);
+          console.error('Error syncing data from Supabase:', err);
         })
         .finally(() => {
-          setIsDataLoading(false);
+          if (showLoader && isMounted) setIsDataLoading(false);
         });
+    };
 
-      // Synchronize user profile display with Google metadata
-      setUserProfile((prev) => ({
-        ...prev,
-        name: user.user_metadata?.full_name || prev.name,
-        email: user.email || prev.email,
-        avatar: user.user_metadata?.avatar_url || prev.avatar,
-      }));
+    syncFromCloud(true);
+
+    // Synchronize user profile display with Google metadata
+    setUserProfile((prev) => ({
+      ...prev,
+      name: user.user_metadata?.full_name || prev.name,
+      email: user.email || prev.email,
+      avatar: user.user_metadata?.avatar_url || prev.avatar,
+    }));
+
+    // Re-sync when user switches back to this tab or app window
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        syncFromCloud(false);
+      }
+    };
+    window.addEventListener('focus', handleVisibilityOrFocus);
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+
+    // Subscribe to Supabase Realtime changes for cross-device updates
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    if (isSupabaseConfigured) {
+      channel = supabase
+        .channel(`sync-${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'expenses',
+            filter: `user_id=eq.${user.id}`,
+          },
+          () => {
+            getExpenses()
+              .then((fetched) => {
+                if (isMounted) setTransactions(fetched);
+              })
+              .catch(() => {});
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'projects',
+            filter: `user_id=eq.${user.id}`,
+          },
+          () => {
+            getProjectsFromSupabase()
+              .then((fetched) => {
+                if (isMounted) setProjects(fetched);
+              })
+              .catch(() => {});
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'user_settings',
+            filter: `user_id=eq.${user.id}`,
+          },
+          () => {
+            getCategoriesFromSupabase()
+              .then((fetchedCats) => {
+                if (!isMounted) return;
+                setIncomeCategories(fetchedCats.incomeCategories);
+                setExpenseCategories(fetchedCats.expenseCategories);
+              })
+              .catch(() => {});
+          }
+        )
+        .subscribe();
     }
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
   }, [user]);
 
   // Transaction Handlers (Optimistic UI + Background Supabase Sync)
@@ -201,9 +301,11 @@ export const App: React.FC = () => {
       // 2. Persist to Supabase and replace tempId with persistent UUID
       try {
         const savedTx = await addExpense(txData);
-        setTransactions((prev) =>
-          prev.map((t) => (t.id === tempId ? savedTx : t))
-        );
+        setTransactions((prev) => {
+          const next = prev.map((t) => (t.id === tempId ? savedTx : t));
+          saveStoredTransactions(next);
+          return next;
+        });
       } catch (err) {
         console.error('Error adding expense to Supabase:', err);
       }
@@ -255,31 +357,79 @@ export const App: React.FC = () => {
       id: `proj-${Date.now()}`,
       createdAt: Date.now(),
     };
-    const updated = [...projects, newProj];
-    setProjects(updated);
-    saveStoredProjects(updated);
+    setProjects((prev) => {
+      const updated = [...prev, newProj];
+      saveStoredProjects(updated);
+      return updated;
+    });
+    void upsertProjectToSupabase(newProj);
   };
 
   const handleEditProject = (project: Project) => {
-    const updated = projects.map((p) => (p.id === project.id ? project : p));
-    setProjects(updated);
-    saveStoredProjects(updated);
+    setProjects((prev) => {
+      const updated = prev.map((p) => (p.id === project.id ? project : p));
+      saveStoredProjects(updated);
+      return updated;
+    });
+    void upsertProjectToSupabase(project);
   };
 
   const handleDeleteProject = (id: string) => {
-    const updated = projects.filter((p) => p.id !== id && p.parentId !== id);
-    setProjects(updated);
-    saveStoredProjects(updated);
+    const target = projects.find((p) => p.id === id);
+    if (target) {
+      const parentProject = target.parentId
+        ? projects.find((p) => p.id === target.parentId)
+        : null;
+      const isMatchingTx = (t: Transaction) =>
+        target.parentId
+          ? t.tag === parentProject?.name && t.subTag === target.name
+          : t.tag === target.name;
+
+      const deletedTxIds = transactions.filter(isMatchingTx).map((t) => t.id);
+      if (deletedTxIds.length > 0) {
+        const deletedSet = new Set(deletedTxIds);
+        setTransactions((prev) => {
+          const remaining = prev.filter((t) => !deletedSet.has(t.id));
+          saveStoredTransactions(remaining);
+          return remaining;
+        });
+        void batchDeleteExpenses(deletedTxIds).catch((err) => {
+          console.error('Error deleting project transactions from Supabase:', err);
+        });
+      }
+    }
+
+    setProjects((prev) => {
+      const targetProj = prev.find((p) => p.id === id);
+      const deletedBudget = targetProj?.parentId && targetProj.budget ? targetProj.budget : 0;
+      const updated = prev
+        .filter((p) => p.id !== id && p.parentId !== id)
+        .map((p) => {
+          if (targetProj?.parentId && p.id === targetProj.parentId && deletedBudget > 0 && p.budget) {
+            const nextBudget = Math.max(0, p.budget - deletedBudget);
+            const nextParent = { ...p, budget: nextBudget > 0 ? nextBudget : undefined };
+            void upsertProjectToSupabase(nextParent);
+            return nextParent;
+          }
+          return p;
+        });
+      saveStoredProjects(updated);
+      return updated;
+    });
+    void deleteProjectFromSupabase(id);
   };
 
   const handleToggleProjectComplete = (id: string, completed: boolean) => {
-    const updated = projects.map((p) =>
-      p.id === id
-        ? { ...p, completed, completedAt: completed ? Date.now() : null }
-        : p
-    );
-    setProjects(updated);
-    saveStoredProjects(updated);
+    setProjects((prev) => {
+      const updated = prev.map((p) => {
+        if (p.id !== id) return p;
+        const nextProj = { ...p, completed, completedAt: completed ? Date.now() : null };
+        void upsertProjectToSupabase(nextProj);
+        return nextProj;
+      });
+      saveStoredProjects(updated);
+      return updated;
+    });
   };
 
   // Cross-view Navigation
@@ -305,10 +455,10 @@ export const App: React.FC = () => {
     setIsTxModalOpen(true);
   };
 
-  const handleViewAttachment = (url: string, title: string) => {
+  const handleViewAttachment = (attachments: string[], title: string) => {
     setAttachmentModal({
       isOpen: true,
-      url,
+      attachments,
       title,
     });
   };
@@ -438,10 +588,12 @@ export const App: React.FC = () => {
             onUpdateIncomeCategories={(cats) => {
               setIncomeCategories(cats);
               saveStoredIncomeCategories(cats);
+              void saveCategoriesToSupabase({ incomeCategories: cats });
             }}
             onUpdateExpenseCategories={(cats) => {
               setExpenseCategories(cats);
               saveStoredExpenseCategories(cats);
+              void saveCategoriesToSupabase({ expenseCategories: cats });
             }}
             onUpdateUserProfile={(prof) => {
               setUserProfile(prof);
@@ -465,17 +617,6 @@ export const App: React.FC = () => {
         <Plus className="w-6 h-6 stroke-[2.5]" />
       </button>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-200/80 bg-white py-4 mt-auto text-center text-xs text-slate-400 mb-16 sm:mb-0">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>Personal Accounting & Cost Center Engine</span>
-          <span className="hidden sm:flex items-center gap-1 font-mono text-[11px] text-slate-500">
-            Press <kbd className="px-1.5 py-0.5 rounded-md bg-slate-100 border border-slate-300 font-bold">N</kbd> anytime to log an entry
-          </span>
-          <span>100% Offline & Private Local Storage</span>
-        </div>
-      </footer>
-
       {/* Add / Edit Transaction Modal */}
       <TransactionModal
         isOpen={isTxModalOpen}
@@ -494,8 +635,8 @@ export const App: React.FC = () => {
       {/* Lightbox Attachment Viewer Modal */}
       <AttachmentViewerModal
         isOpen={attachmentModal.isOpen}
-        onClose={() => setAttachmentModal({ isOpen: false, url: null, title: '' })}
-        imageUrl={attachmentModal.url}
+        onClose={() => setAttachmentModal({ isOpen: false, attachments: [], title: '' })}
+        attachments={attachmentModal.attachments}
         title={attachmentModal.title}
       />
 

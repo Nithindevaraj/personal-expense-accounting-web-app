@@ -54,6 +54,14 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   const [description, setDescription] = useState('');
   const [budget, setBudget] = useState('');
   const [color, setColor] = useState('#3b82f6');
+  const [budgetPrompt, setBudgetPrompt] = useState<{
+    parentBudget: number;
+    otherSubTotal: number;
+    newSubBudget: number;
+    totalSubBudget: number;
+    excess: number;
+  } | null>(null);
+  const [budgetError, setBudgetError] = useState<string | null>(null);
 
   const topLevelProjects = useMemo(
     () => projects.filter((p) => !p.parentId),
@@ -184,6 +192,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     setDescription('');
     setBudget('');
     setColor('#3b82f6');
+    setBudgetPrompt(null);
+    setBudgetError(null);
     setIsAddModalOpen(true);
   };
 
@@ -194,6 +204,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     setDescription('');
     setBudget('');
     setColor(parent.color || '#3b82f6');
+    setBudgetPrompt(null);
+    setBudgetError(null);
     setIsAddModalOpen(true);
   };
 
@@ -206,6 +218,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     setDescription(p.description || '');
     setBudget(p.budget ? String(p.budget) : '');
     setColor(p.color || '#3b82f6');
+    setBudgetPrompt(null);
+    setBudgetError(null);
     setIsAddModalOpen(true);
   };
 
@@ -213,16 +227,13 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     setCollapsedParents((prev) => ({ ...prev, [parentId]: !prev[parentId] }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) return;
-
+  const saveSubOrProject = (parsedBudget: number | undefined) => {
     if (editingProject) {
       onEditProject({
         ...editingProject,
         name: name.trim(),
         description: description.trim(),
-        budget: budget ? parseFloat(budget) : undefined,
+        budget: parsedBudget,
         color,
       });
     } else {
@@ -230,13 +241,67 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         parentId: parentForNewSub ? parentForNewSub.id : null,
         name: name.trim(),
         description: description.trim(),
-        budget: budget ? parseFloat(budget) : undefined,
+        budget: parsedBudget,
         color,
       });
     }
 
     setIsAddModalOpen(false);
     setParentForNewSub(null);
+    setBudgetPrompt(null);
+    setBudgetError(null);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setBudgetError(null);
+
+    const parsedBudget = budget ? parseFloat(budget) : undefined;
+
+    if (parentForNewSub) {
+      const newSubBudget = parsedBudget && parsedBudget > 0 ? parsedBudget : 0;
+      const parentBudget = parentForNewSub.budget || 0;
+      const otherSubTotal = projects
+        .filter((p) => p.parentId === parentForNewSub.id && p.id !== editingProject?.id)
+        .reduce((sum, p) => sum + (p.budget || 0), 0);
+      const totalSubBudget = otherSubTotal + newSubBudget;
+
+      if (newSubBudget > 0 && totalSubBudget > parentBudget) {
+        setBudgetPrompt({
+          parentBudget,
+          otherSubTotal,
+          newSubBudget,
+          totalSubBudget,
+          excess: totalSubBudget - parentBudget,
+        });
+        return;
+      }
+    } else if (editingProject) {
+      const subTotal = projects
+        .filter((p) => p.parentId === editingProject.id)
+        .reduce((sum, p) => sum + (p.budget || 0), 0);
+      const newParentBudget = parsedBudget && parsedBudget > 0 ? parsedBudget : 0;
+
+      if (subTotal > 0 && newParentBudget < subTotal) {
+        setBudgetError(
+          `Jobs total ${formatINR(subTotal, false)}. Project budget cannot be less than the sum of its jobs.`
+        );
+        return;
+      }
+    }
+
+    saveSubOrProject(parsedBudget);
+  };
+
+  const handleConfirmBudgetAdjustment = () => {
+    if (!parentForNewSub || !budgetPrompt) return;
+    const parsedBudget = budget ? parseFloat(budget) : undefined;
+    onEditProject({
+      ...parentForNewSub,
+      budget: budgetPrompt.totalSubBudget,
+    });
+    saveSubOrProject(parsedBudget);
   };
 
   return (
@@ -463,7 +528,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                         onClick={() => {
                           if (
                             window.confirm(
-                              `Delete "${p.name}"${p.subProjects.length > 0 ? ` and its ${p.subProjects.length} sub-project(s)` : ''}? Transactions with this tag will retain their tag label.`
+                              `Delete "${p.name}"${p.subProjects.length > 0 ? ` and its ${p.subProjects.length} job(s)` : ''}? All respective transactions will also be deleted.`
                             )
                           ) {
                             onDeleteProject(p.id);
@@ -547,17 +612,17 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                         ) : (
                           <ChevronDown className="w-3.5 h-3.5" />
                         ))}
-                      <span>Sub-projects ({p.subProjects.length})</span>
+                      <span>Jobs ({p.subProjects.length})</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => handleOpenAddSubProject(p)}
                       className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-[11px] transition-colors cursor-pointer"
-                      title={`Add sub-project under ${p.name}`}
+                      title={`Add job under ${p.name}`}
                     >
                       <FolderPlus className="w-3 h-3" />
-                      <span>+ Sub-project</span>
+                      <span>+ Job</span>
                     </button>
                   </div>
 
@@ -582,21 +647,11 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                               <span className="truncate">{sub.name}</span>
                             </button>
                             <div className="flex items-center gap-0.5 shrink-0">
-                              <input
-                                type="checkbox"
-                                checked={Boolean(sub.completed)}
-                                onChange={(e) =>
-                                  onToggleProjectComplete(sub.id, e.target.checked)
-                                }
-                                title="Mark sub-project completed and archive"
-                                aria-label={`Mark ${sub.name} as completed`}
-                                className="w-3.5 h-3.5 mr-1 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
-                              />
                               <button
                                 type="button"
                                 onClick={() => handleOpenEdit(sub)}
                                 className="p-1 hover:bg-white rounded text-slate-400 hover:text-slate-700 cursor-pointer"
-                                title="Edit sub-project"
+                                title="Edit job"
                               >
                                 <Edit2 className="w-3 h-3" />
                               </button>
@@ -605,14 +660,14 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                                 onClick={() => {
                                   if (
                                     window.confirm(
-                                      `Delete sub-project "${sub.name}"? Existing transactions will remain under "${p.name}".`
+                                      `Delete job "${sub.name}"? All respective transactions under "${sub.name}" will also be deleted.`
                                     )
                                   ) {
                                     onDeleteProject(sub.id);
                                   }
                                 }}
                                 className="p-1 hover:bg-rose-50 rounded text-slate-400 hover:text-rose-600 cursor-pointer"
-                                title="Delete sub-project"
+                                title="Delete job"
                               >
                                 <Trash2 className="w-3 h-3" />
                               </button>
@@ -834,7 +889,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                           </h3>
                           {item.parentName && (
                             <span className="text-[10px] font-semibold text-slate-500">
-                              Sub-project of {item.parentName}
+                              Job of {item.parentName}
                             </span>
                           )}
                         </div>
@@ -950,30 +1005,26 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         createPortal(
           <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 pb-20 sm:pb-4">
             <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-5 sm:p-6 animate-fade-in max-h-[85dvh] overflow-y-auto">
-            <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-1">
+            <h3 className={`text-base sm:text-lg font-bold text-slate-900 ${parentForNewSub ? 'mb-1' : 'mb-4'}`}>
               {editingProject
                 ? parentForNewSub
-                  ? 'Edit Sub-project'
+                  ? 'Edit Job'
                   : 'Edit Project'
                 : parentForNewSub
-                  ? 'Create Sub-project'
+                  ? 'Create Job'
                   : 'Create New Project'}
             </h3>
-            <p className="text-xs text-slate-500 mb-4">
-              {parentForNewSub ? (
-                <>
-                  Under parent project{' '}
-                  <span className="font-bold text-slate-800">{parentForNewSub.name}</span>
-                </>
-              ) : (
-                'Projects dynamically link to the Ledger and calculate P&L.'
-              )}
-            </p>
+            {parentForNewSub && (
+              <p className="text-xs text-slate-500 mb-4">
+                Under parent project{' '}
+                <span className="font-bold text-slate-800">{parentForNewSub.name}</span>
+              </p>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  {parentForNewSub ? 'Sub-project Name *' : 'Project Name *'}
+                  {parentForNewSub ? 'Job Name *' : 'Project Name *'}
                 </label>
                 <input
                   type="text"
@@ -1000,17 +1051,66 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Monthly Budget Allocation (₹ Optional)
+                  Budget (₹ Optional)
                 </label>
                 <input
                   type="number"
                   min="0"
                   step="100"
                   value={budget}
-                  onChange={(e) => setBudget(e.target.value)}
+                  onChange={(e) => {
+                    setBudget(e.target.value);
+                    setBudgetPrompt(null);
+                    setBudgetError(null);
+                  }}
                   placeholder="e.g. 50000"
                   className="w-full px-3 py-2.5 text-base sm:text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-medium"
                 />
+                {parentForNewSub && (
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    Project budget: {formatINR(parentForNewSub.budget || 0, false)} · Allocated to other jobs:{' '}
+                    {formatINR(
+                      projects
+                        .filter((p) => p.parentId === parentForNewSub.id && p.id !== editingProject?.id)
+                        .reduce((sum, p) => sum + (p.budget || 0), 0),
+                      false
+                    )}
+                  </p>
+                )}
+                {budgetError && (
+                  <p className="mt-1.5 text-xs font-medium text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-2">
+                    {budgetError}
+                  </p>
+                )}
+                {budgetPrompt && parentForNewSub && (
+                  <div className="mt-2.5 p-3 rounded-xl bg-amber-50 border border-amber-200 space-y-2.5">
+                    <p className="text-xs text-amber-900 leading-relaxed">
+                      Job budgets total{' '}
+                      <span className="font-bold">{formatINR(budgetPrompt.totalSubBudget, false)}</span>, which exceeds{' '}
+                      <span className="font-bold">{parentForNewSub.name}</span>&apos;s budget (
+                      {formatINR(budgetPrompt.parentBudget, false)}) by{' '}
+                      <span className="font-bold">{formatINR(budgetPrompt.excess, false)}</span>. Add{' '}
+                      <span className="font-bold">{formatINR(budgetPrompt.excess, false)}</span> adjustment to the
+                      project budget?
+                    </p>
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setBudgetPrompt(null)}
+                        className="px-3 py-1.5 rounded-lg border border-amber-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleConfirmBudgetAdjustment}
+                        className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold cursor-pointer"
+                      >
+                        Add {formatINR(budgetPrompt.excess, false)} & Save
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -1056,7 +1156,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                   {editingProject
                     ? 'Save Changes'
                     : parentForNewSub
-                      ? 'Create Sub-project'
+                      ? 'Create Job'
                       : 'Create Project'}
                 </button>
               </div>
