@@ -62,7 +62,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setType('Expense');
       setDate(getTodayString());
       setAmount('');
-      setCategory(expenseCategories[0] || 'Miscellaneous');
+      setCategory(expenseCategories[0] || 'Food');
       setTag(firstParent?.name || 'Project Alpha');
       setSubTag(null);
       setDescription('');
@@ -78,11 +78,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     setType(newType);
     if (newType === 'Income') {
       if (!incomeCategories.includes(category)) {
-        setCategory(incomeCategories[0] || 'Monthly salary');
+        setCategory(incomeCategories[0] || 'Salary');
       }
     } else {
       if (!expenseCategories.includes(category)) {
-        setCategory(expenseCategories[0] || 'Food & Dining');
+        setCategory(expenseCategories[0] || 'Food');
       }
     }
   };
@@ -173,7 +173,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         slNo: editingTransaction ? slNo : nextSlNo,
         date: date || getTodayString(),
         type,
-        category: category || (type === 'Income' ? 'Monthly salary' : 'Food & Dining'),
+        category: category || (type === 'Income' ? 'Salary' : 'Food'),
         amount: parsedAmount,
         tag: tag || 'Project Alpha',
         subTag: subTag || null,

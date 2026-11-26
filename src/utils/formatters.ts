@@ -133,7 +133,7 @@ export function parseCSVToTransactions(csvContent: string): Partial<Transaction>
 
     const typeRaw = cols[2] ? cols[2].trim().toLowerCase() : '';
     const type = typeRaw.includes('income') ? 'Income' : 'Expense';
-    const category = cols[3] ? cols[3].trim() : 'Miscellaneous';
+    const category = cols[3] ? cols[3].trim() : 'Purchase';
     const amount = parseFloat(cols[4]?.replace(/[₹,$\s]/g, '') || '0') || 0;
     const tag = cols[5] ? cols[5].trim() : 'Project Alpha';
     const description = cols[6] ? cols[6].trim() : '';

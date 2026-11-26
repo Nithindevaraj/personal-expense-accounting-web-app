@@ -32,42 +32,21 @@ export interface DateFilterRange {
   to: string;   // YYYY-MM-DD or empty
 }
 
-// 15 exact Income types from the Google Sheet
 export const DEFAULT_INCOME_CATEGORIES: string[] = [
-  'Monthly salary',
-  'wages',
-  'freelance payouts',
-  'business profits',
-  'Pocket money',
-  'monthly allowances',
-  'financial support from family',
-  'financial support from friends',
-  'gains',
-  'tax refunds',
-  'gifts',
-  'money earned from selling used items',
-  'Advances',
-  'Receiving Back',
-  'income self-transfer',
+  'Salary',
+  'Advance',
+  'Returns',
+  'Refund',
+  'Gifts',
 ];
 
-// Curated standard Expense categories
 export const DEFAULT_EXPENSE_CATEGORIES: string[] = [
-  'Food & Dining',
-  'Housing & Rent',
-  'Groceries',
-  'Transportation & Fuel',
-  'Utilities & Bills',
-  'Shopping & Lifestyle',
-  'Entertainment & Leisure',
-  'Health & Medical',
-  'Education & Learning',
-  'Travel & Outings',
-  'Investments & Savings',
-  'EMI & Loans',
-  'Personal Care',
-  'Gifts & Donations',
-  'Miscellaneous',
+  'Rents',
+  'Food',
+  'Transport',
+  'Utilities',
+  'Purchase',
+  'Entertainment',
 ];
 
 // Default Project Tags from the Google Sheet

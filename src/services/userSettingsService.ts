@@ -25,6 +25,19 @@ export async function getCategoriesFromSupabase(): Promise<CloudCategories> {
     return { incomeCategories: localIncome, expenseCategories: localExpense };
   }
 
+  try {
+    if (localStorage.getItem('personal_accounting_cat_cloud_v2') !== '1') {
+      await saveCategoriesToSupabase({
+        incomeCategories: localIncome,
+        expenseCategories: localExpense,
+      });
+      localStorage.setItem('personal_accounting_cat_cloud_v2', '1');
+      return { incomeCategories: localIncome, expenseCategories: localExpense };
+    }
+  } catch {
+    // ignore storage errors
+  }
+
   const { data, error } = await supabase
     .from('user_settings')
     .select('user_id, income_categories, expense_categories')
