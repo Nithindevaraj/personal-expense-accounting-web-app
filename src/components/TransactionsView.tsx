@@ -310,9 +310,6 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
 
         {/* Quick Type Filter Chips (Mobile & Desktop) */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1">
-            Type:
-          </span>
           <button
             type="button"
             onClick={() => setTypeFilter('all')}
