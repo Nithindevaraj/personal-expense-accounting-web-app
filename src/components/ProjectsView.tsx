@@ -53,7 +53,6 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [budget, setBudget] = useState('');
-  const [color, setColor] = useState('#3b82f6');
   const [budgetPrompt, setBudgetPrompt] = useState<{
     parentBudget: number;
     otherSubTotal: number;
@@ -191,7 +190,6 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     setName('');
     setDescription('');
     setBudget('');
-    setColor('#3b82f6');
     setBudgetPrompt(null);
     setBudgetError(null);
     setIsAddModalOpen(true);
@@ -203,7 +201,6 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     setName('');
     setDescription('');
     setBudget('');
-    setColor(parent.color || '#3b82f6');
     setBudgetPrompt(null);
     setBudgetError(null);
     setIsAddModalOpen(true);
@@ -217,7 +214,6 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     setName(p.name);
     setDescription(p.description || '');
     setBudget(p.budget ? String(p.budget) : '');
-    setColor(p.color || '#3b82f6');
     setBudgetPrompt(null);
     setBudgetError(null);
     setIsAddModalOpen(true);
@@ -234,7 +230,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         name: name.trim(),
         description: description.trim(),
         budget: parsedBudget,
-        color,
+        color: editingProject.color || '#3b82f6',
       });
     } else {
       onAddProject({
@@ -242,7 +238,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         name: name.trim(),
         description: description.trim(),
         budget: parsedBudget,
-        color,
+        color: parentForNewSub?.color || '#3b82f6',
       });
     }
 
@@ -1113,34 +1109,6 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                     </div>
                   </div>
                 )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Badge Color
-                </label>
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  {[
-                    '#3b82f6',
-                    '#10b981',
-                    '#8b5cf6',
-                    '#f59e0b',
-                    '#ec4899',
-                    '#06b6d4',
-                    '#64748b',
-                  ].map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setColor(c)}
-                      className={`w-7 h-7 sm:w-6 sm:h-6 rounded-full transition-transform cursor-pointer ${
-                        color === c ? 'scale-125 ring-2 ring-indigo-500 ring-offset-2' : ''
-                      }`}
-                      style={{ backgroundColor: c }}
-                      aria-label={`Select color ${c}`}
-                    />
-                  ))}
-                </div>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 pb-2 sm:pb-0">
