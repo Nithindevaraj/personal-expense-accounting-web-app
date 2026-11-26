@@ -1,21 +1,26 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, Loader2 } from 'lucide-react';
-import type { Project, Transaction, TransactionType } from './types';
+import type { Account, Project, Transaction, TransactionType } from './types';
 import {
+  DEFAULT_ACCOUNT_ID,
   DEFAULT_EXPENSE_CATEGORIES,
   DEFAULT_INCOME_CATEGORIES,
-  DEFAULT_PROJECTS,
+  createDefaultProjectsForAccount,
   isGeneralProject,
 } from './types';
 import {
   type UserProfile,
   DEFAULT_USER_PROFILE,
+  getActiveAccountId,
+  getStoredAccounts,
   getStoredExpenseCategories,
   getStoredIncomeCategories,
   getStoredProjects,
   getStoredTransactions,
   getUserProfile,
   resetToDefaults,
+  saveActiveAccountId,
+  saveStoredAccounts,
   saveStoredExpenseCategories,
   saveStoredIncomeCategories,
   saveStoredProjects,
@@ -52,7 +57,9 @@ import {
   deleteProjectFromSupabase,
 } from './services/projectService';
 import {
+  getAccountsFromSupabase,
   getCategoriesFromSupabase,
+  saveAccountsToSupabase,
   saveCategoriesToSupabase,
 } from './services/userSettingsService';
 
@@ -76,8 +83,14 @@ export const App: React.FC = () => {
     }
     return 'dashboard';
   });
-  const [transactions, setTransactions] = useState<Transaction[]>(getStoredTransactions);
-  const [projects, setProjects] = useState<Project[]>(getStoredProjects);
+  const [accounts, setAccounts] = useState<Account[]>(getStoredAccounts);
+  const [activeAccountId, setActiveAccountId] = useState<string>(getActiveAccountId);
+  const [transactions, setTransactions] = useState<Transaction[]>(() =>
+    getStoredTransactions(getActiveAccountId())
+  );
+  const [projects, setProjects] = useState<Project[]>(() =>
+    getStoredProjects(getActiveAccountId())
+  );
 
   const activeProjects = useMemo(() => {
     const archivedParentIds = new Set(
@@ -191,16 +204,18 @@ export const App: React.FC = () => {
     const syncFromCloud = (showLoader = false) => {
       if (showLoader) setIsDataLoading(true);
       Promise.all([
-        getExpenses(),
-        getProjectsFromSupabase(),
+        getExpenses(activeAccountId),
+        getProjectsFromSupabase(activeAccountId),
         getCategoriesFromSupabase(),
+        getAccountsFromSupabase(),
       ])
-        .then(([fetchedTx, fetchedProjects, fetchedCats]) => {
+        .then(([fetchedTx, fetchedProjects, fetchedCats, fetchedAccounts]) => {
           if (!isMounted) return;
           setTransactions(fetchedTx);
           setProjects(fetchedProjects);
           setIncomeCategories(fetchedCats.incomeCategories);
           setExpenseCategories(fetchedCats.expenseCategories);
+          setAccounts(fetchedAccounts);
         })
         .catch((err) => {
           console.error('Error syncing data from Supabase:', err);
@@ -243,7 +258,7 @@ export const App: React.FC = () => {
             filter: `user_id=eq.${user.id}`,
           },
           () => {
-            getExpenses()
+            getExpenses(activeAccountId)
               .then((fetched) => {
                 if (isMounted) setTransactions(fetched);
               })
@@ -259,7 +274,7 @@ export const App: React.FC = () => {
             filter: `user_id=eq.${user.id}`,
           },
           () => {
-            getProjectsFromSupabase()
+            getProjectsFromSupabase(activeAccountId)
               .then((fetched) => {
                 if (isMounted) setProjects(fetched);
               })
@@ -275,11 +290,12 @@ export const App: React.FC = () => {
             filter: `user_id=eq.${user.id}`,
           },
           () => {
-            getCategoriesFromSupabase()
-              .then((fetchedCats) => {
+            Promise.all([getCategoriesFromSupabase(), getAccountsFromSupabase()])
+              .then(([fetchedCats, fetchedAccounts]) => {
                 if (!isMounted) return;
                 setIncomeCategories(fetchedCats.incomeCategories);
                 setExpenseCategories(fetchedCats.expenseCategories);
+                setAccounts(fetchedAccounts);
               })
               .catch(() => {});
           }
@@ -295,7 +311,7 @@ export const App: React.FC = () => {
         supabase.removeChannel(channel);
       }
     };
-  }, [user]);
+  }, [user, activeAccountId]);
 
   // Transaction Handlers (Optimistic UI + Background Supabase Sync)
   const handleSaveTransaction = async (
@@ -313,7 +329,7 @@ export const App: React.FC = () => {
           : t
       );
       setTransactions(updated);
-      saveStoredTransactions(updated);
+      saveStoredTransactions(updated, activeAccountId);
 
       // 2. Persist to Supabase
       try {
@@ -332,18 +348,18 @@ export const App: React.FC = () => {
       markTxInFlight(tempId);
       const updated = [tempTx, ...transactions];
       setTransactions(updated);
-      saveStoredTransactions(updated);
+      saveStoredTransactions(updated, activeAccountId);
 
       // 2. Persist to Supabase and replace tempId with persistent UUID
       try {
-        const savedTx = await addExpense(txData);
+        const savedTx = await addExpense(txData, activeAccountId);
         setTransactions((prev) => {
           const withoutDup = prev.filter((t) => t.id !== savedTx.id);
           const hasTemp = withoutDup.some((t) => t.id === tempId);
           const next = hasTemp
             ? withoutDup.map((t) => (t.id === tempId ? savedTx : t))
             : [savedTx, ...withoutDup];
-          saveStoredTransactions(next);
+          saveStoredTransactions(next, activeAccountId);
           return next;
         });
       } catch (err) {
@@ -358,7 +374,7 @@ export const App: React.FC = () => {
     // 1. Optimistic UI update
     const updated = transactions.filter((t) => t.id !== id);
     setTransactions(updated);
-    saveStoredTransactions(updated);
+    saveStoredTransactions(updated, activeAccountId);
 
     // 2. Persist to Supabase
     try {
@@ -373,7 +389,7 @@ export const App: React.FC = () => {
     const idSet = new Set(ids);
     const updated = transactions.filter((t) => !idSet.has(t.id));
     setTransactions(updated);
-    saveStoredTransactions(updated);
+    saveStoredTransactions(updated, activeAccountId);
 
     // 2. Persist to Supabase
     try {
@@ -401,19 +417,19 @@ export const App: React.FC = () => {
     };
     setProjects((prev) => {
       const updated = [...prev, newProj];
-      saveStoredProjects(updated);
+      saveStoredProjects(updated, activeAccountId);
       return updated;
     });
-    void upsertProjectToSupabase(newProj);
+    void upsertProjectToSupabase(newProj, activeAccountId);
   };
 
   const handleEditProject = (project: Project) => {
     setProjects((prev) => {
       const updated = prev.map((p) => (p.id === project.id ? project : p));
-      saveStoredProjects(updated);
+      saveStoredProjects(updated, activeAccountId);
       return updated;
     });
-    void upsertProjectToSupabase(project);
+    void upsertProjectToSupabase(project, activeAccountId);
   };
 
   const handleDeleteProject = (id: string) => {
@@ -433,7 +449,7 @@ export const App: React.FC = () => {
         const deletedSet = new Set(deletedTxIds);
         setTransactions((prev) => {
           const remaining = prev.filter((t) => !deletedSet.has(t.id));
-          saveStoredTransactions(remaining);
+          saveStoredTransactions(remaining, activeAccountId);
           return remaining;
         });
         void batchDeleteExpenses(deletedTxIds).catch((err) => {
@@ -451,12 +467,12 @@ export const App: React.FC = () => {
           if (targetProj?.parentId && p.id === targetProj.parentId && deletedBudget > 0 && p.budget) {
             const nextBudget = Math.max(0, p.budget - deletedBudget);
             const nextParent = { ...p, budget: nextBudget > 0 ? nextBudget : undefined };
-            void upsertProjectToSupabase(nextParent);
+            void upsertProjectToSupabase(nextParent, activeAccountId);
             return nextParent;
           }
           return p;
         });
-      saveStoredProjects(updated);
+      saveStoredProjects(updated, activeAccountId);
       return updated;
     });
     void deleteProjectFromSupabase(id);
@@ -467,10 +483,10 @@ export const App: React.FC = () => {
       const updated = prev.map((p) => {
         if (p.id !== id || isGeneralProject(p)) return p;
         const nextProj = { ...p, completed, completedAt: completed ? Date.now() : null };
-        void upsertProjectToSupabase(nextProj);
+        void upsertProjectToSupabase(nextProj, activeAccountId);
         return nextProj;
       });
-      saveStoredProjects(updated);
+      saveStoredProjects(updated, activeAccountId);
       return updated;
     });
   };
@@ -523,17 +539,58 @@ export const App: React.FC = () => {
 
   const handleClearAllData = () => {
     setTransactions([]);
-    saveStoredTransactions([]);
+    saveStoredTransactions([], activeAccountId);
+  };
+
+  const handleSwitchAccount = (accountId: string) => {
+    if (accountId === activeAccountId) return;
+    setActiveAccountId(accountId);
+    saveActiveAccountId(accountId);
+    setTransactions(getStoredTransactions(accountId));
+    setProjects(getStoredProjects(accountId));
+    setTxLedgerFilter({});
+  };
+
+  const handleAddAccount = (name: string) => {
+    const newAccount: Account = {
+      id: `acc-${Date.now()}`,
+      name,
+      createdAt: Date.now(),
+    };
+    const nextAccounts = [...accounts, newAccount];
+    setAccounts(nextAccounts);
+    saveStoredAccounts(nextAccounts);
+    void saveAccountsToSupabase(nextAccounts);
+    handleSwitchAccount(newAccount.id);
+  };
+
+  const handleRenameAccount = (id: string, name: string) => {
+    const nextAccounts = accounts.map((a) => (a.id === id ? { ...a, name } : a));
+    setAccounts(nextAccounts);
+    saveStoredAccounts(nextAccounts);
+    void saveAccountsToSupabase(nextAccounts);
+  };
+
+  const handleDeleteAccount = (id: string) => {
+    if (id === DEFAULT_ACCOUNT_ID) return;
+    const nextAccounts = accounts.filter((a) => a.id !== id);
+    setAccounts(nextAccounts);
+    saveStoredAccounts(nextAccounts);
+    void saveAccountsToSupabase(nextAccounts);
+    if (activeAccountId === id) {
+      handleSwitchAccount(DEFAULT_ACCOUNT_ID);
+    }
   };
 
   const handleResetToDefaults = async () => {
     const prevTxIds = transactions.map((t) => t.id);
     const prevProjectIds = projects.map((p) => p.id);
+    const defaultProjects = createDefaultProjectsForAccount(activeAccountId);
 
-    resetToDefaults();
+    resetToDefaults(activeAccountId);
     applyTheme('system');
     setTransactions([]);
-    setProjects(DEFAULT_PROJECTS);
+    setProjects(defaultProjects);
     setIncomeCategories(DEFAULT_INCOME_CATEGORIES);
     setExpenseCategories(DEFAULT_EXPENSE_CATEGORIES);
     setUserProfile(
@@ -555,8 +612,8 @@ export const App: React.FC = () => {
         for (const pid of prevProjectIds) {
           await deleteProjectFromSupabase(pid);
         }
-        for (const proj of DEFAULT_PROJECTS) {
-          await upsertProjectToSupabase(proj);
+        for (const proj of defaultProjects) {
+          await upsertProjectToSupabase(proj, activeAccountId);
         }
         await saveCategoriesToSupabase({
           incomeCategories: DEFAULT_INCOME_CATEGORIES,
@@ -600,6 +657,12 @@ export const App: React.FC = () => {
         projectCount={activeProjects.filter((p) => !p.parentId).length}
         userProfile={userProfile}
         onOpenProfile={() => setIsProfileModalOpen(true)}
+        accounts={accounts}
+        activeAccountId={activeAccountId}
+        onSwitchAccount={handleSwitchAccount}
+        onAddAccount={handleAddAccount}
+        onRenameAccount={handleRenameAccount}
+        onDeleteAccount={handleDeleteAccount}
       />
 
       {/* Cloud Sync Status Banner */}

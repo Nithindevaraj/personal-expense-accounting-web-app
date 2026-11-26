@@ -1,7 +1,10 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { type Account, DEFAULT_ACCOUNTS } from '../types';
 import {
+  getStoredAccounts,
   getStoredExpenseCategories,
   getStoredIncomeCategories,
+  saveStoredAccounts,
   saveStoredExpenseCategories,
   saveStoredIncomeCategories,
 } from '../utils/storage';
@@ -99,5 +102,49 @@ export async function saveCategoriesToSupabase(updates: {
 
   if (error) {
     console.error('Failed to save categories to Supabase:', error.message);
+  }
+}
+
+export async function getAccountsFromSupabase(): Promise<Account[]> {
+  const localAccounts = getStoredAccounts();
+  if (!isSupabaseConfigured) return localAccounts;
+
+  const { data, error } = await supabase
+    .from('user_settings')
+    .select('accounts')
+    .maybeSingle();
+
+  if (error) {
+    console.error('Failed to fetch accounts from Supabase:', error.message);
+    return localAccounts;
+  }
+
+  const cloudAccounts = Array.isArray((data as { accounts?: unknown } | null)?.accounts)
+    ? ((data as { accounts: Account[] }).accounts)
+    : [];
+
+  if (cloudAccounts.length === 0) {
+    await saveAccountsToSupabase(localAccounts.length > 0 ? localAccounts : DEFAULT_ACCOUNTS);
+    return localAccounts;
+  }
+
+  saveStoredAccounts(cloudAccounts);
+  return cloudAccounts;
+}
+
+export async function saveAccountsToSupabase(accounts: Account[]): Promise<void> {
+  if (!isSupabaseConfigured) return;
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { error } = await supabase
+    .from('user_settings')
+    .upsert([{ user_id: user.id, accounts }], { onConflict: 'user_id' });
+
+  if (error) {
+    console.error('Failed to save accounts to Supabase:', error.message);
   }
 }

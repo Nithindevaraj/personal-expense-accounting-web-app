@@ -29,7 +29,7 @@ function mapRowToProject(row: DbProjectRow): Project {
   };
 }
 
-function mapProjectToPayload(project: Project) {
+function mapProjectToPayload(project: Project, accountId: string = 'default') {
   return {
     id: project.id,
     parent_id: project.parentId || null,
@@ -39,44 +39,49 @@ function mapProjectToPayload(project: Project) {
     color: project.color || '#3b82f6',
     completed: Boolean(project.completed),
     completed_at: project.completedAt ? new Date(project.completedAt).toISOString() : null,
+    account_id: accountId,
   };
 }
 
-export async function getProjectsFromSupabase(): Promise<Project[]> {
+export async function getProjectsFromSupabase(accountId: string = 'default'): Promise<Project[]> {
   if (!isSupabaseConfigured) {
-    return getStoredProjects();
+    return getStoredProjects(accountId);
   }
 
   const { data, error } = await supabase
     .from('projects')
     .select('*')
+    .eq('account_id', accountId)
     .order('created_at', { ascending: true });
 
   if (error) {
     console.error('Failed to fetch projects from Supabase:', error.message);
-    return getStoredProjects();
+    return getStoredProjects(accountId);
   }
 
   const rows = (data as DbProjectRow[]) || [];
   if (rows.length === 0) {
-    const localProjects = getStoredProjects();
+    const localProjects = getStoredProjects(accountId);
     for (const proj of localProjects) {
-      await upsertProjectToSupabase(proj);
+      await upsertProjectToSupabase(proj, accountId);
     }
     return localProjects;
   }
 
   const mapped = rows.map(mapRowToProject);
-  saveStoredProjects(mapped);
+  saveStoredProjects(mapped, accountId);
   return mapped;
 }
 
-export async function upsertProjectToSupabase(project: Project): Promise<void> {
+export async function upsertProjectToSupabase(
+  project: Project,
+  accountId: string = 'default'
+): Promise<void> {
   if (!isSupabaseConfigured) return;
 
   const { error } = await supabase
     .from('projects')
-    .upsert([mapProjectToPayload(project)], { onConflict: 'id' });
+    .upsert([mapProjectToPayload(project, accountId)], { onConflict: 'id' });
 
   if (error) {
     console.error('Failed to upsert project in Supabase:', error.message);

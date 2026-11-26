@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS public.expenses (
     amount NUMERIC(12, 2) NOT NULL CHECK (amount >= 0),
     tag TEXT DEFAULT 'Personal',
     sub_tag TEXT DEFAULT NULL,
+    account_id TEXT NOT NULL DEFAULT 'default',
     description TEXT NOT NULL DEFAULT '',
     notes TEXT DEFAULT '',
     attachments TEXT[] DEFAULT '{}'::TEXT[],
@@ -36,6 +37,7 @@ CREATE TABLE IF NOT EXISTS public.projects (
     color TEXT DEFAULT '#3b82f6',
     completed BOOLEAN NOT NULL DEFAULT false,
     completed_at TIMESTAMPTZ,
+    account_id TEXT NOT NULL DEFAULT 'default',
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
@@ -47,6 +49,8 @@ CREATE TABLE IF NOT EXISTS public.user_settings (
     avatar_url TEXT,
     income_categories JSONB DEFAULT '[]'::JSONB,
     expense_categories JSONB DEFAULT '[]'::JSONB,
+    accounts JSONB DEFAULT '[{"id":"default","name":"Personal"}]'::JSONB,
+    active_account_id TEXT DEFAULT 'default',
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 

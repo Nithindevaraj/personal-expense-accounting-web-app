@@ -41,7 +41,10 @@ export function mapRowToTransaction(row: DbExpenseRow): Transaction {
 }
 
 // Convert frontend Transaction data to DB payload
-export function mapTransactionToPayload(tx: Omit<Transaction, 'id' | 'createdAt'>) {
+export function mapTransactionToPayload(
+  tx: Omit<Transaction, 'id' | 'createdAt'>,
+  accountId: string = 'default'
+) {
   return {
     sl_no: tx.slNo,
     date: tx.date,
@@ -53,6 +56,7 @@ export function mapTransactionToPayload(tx: Omit<Transaction, 'id' | 'createdAt'
     description: tx.description || '',
     notes: tx.notes || '',
     attachments: tx.attachments || [],
+    account_id: accountId,
   };
 }
 
@@ -71,9 +75,9 @@ export function clearTxInFlight(tempId: string): void {
  * Fetch user's expenses ordered by date descending.
  * PostgreSQL Row-Level Security automatically filters rows where user_id = auth.uid()
  */
-export async function getExpenses(): Promise<Transaction[]> {
+export async function getExpenses(accountId: string = 'default'): Promise<Transaction[]> {
   if (!isSupabaseConfigured) {
-    return getStoredTransactions();
+    return getStoredTransactions(accountId);
   }
 
   if (activeGetExpensesPromise) {
@@ -83,7 +87,7 @@ export async function getExpenses(): Promise<Transaction[]> {
   activeGetExpensesPromise = (async () => {
     try {
       // Push only truly stale/offline local transactions (skip any currently being uploaded)
-      const localTxs = getStoredTransactions();
+      const localTxs = getStoredTransactions(accountId);
       const pendingLocal = localTxs.filter(
         (t) =>
           (t.id.startsWith('tx-temp-') || t.id.startsWith('tx-')) &&
@@ -94,10 +98,10 @@ export async function getExpenses(): Promise<Transaction[]> {
           inFlightTempIds.add(pending.id);
           try {
             const { id: _id, createdAt: _createdAt, ...payload } = pending;
-            await addExpense(payload);
+            await addExpense(payload, accountId);
             // Remove this pending temp item from localStorage immediately so it can't be re-uploaded
-            const latestLocal = getStoredTransactions().filter((t) => t.id !== pending.id);
-            saveStoredTransactions(latestLocal);
+            const latestLocal = getStoredTransactions(accountId).filter((t) => t.id !== pending.id);
+            saveStoredTransactions(latestLocal, accountId);
           } catch (err) {
             console.warn('Could not sync pending local transaction:', err);
           } finally {
@@ -109,22 +113,23 @@ export async function getExpenses(): Promise<Transaction[]> {
       const { data, error } = await supabase
         .from('expenses')
         .select('*')
+        .eq('account_id', accountId)
         .order('date', { ascending: false });
 
       if (error) {
         console.error('Failed to fetch expenses from Supabase:', error.message);
         // Fallback to local storage on error
-        return getStoredTransactions();
+        return getStoredTransactions(accountId);
       }
 
       const transactions = (data as DbExpenseRow[]).map(mapRowToTransaction);
       // Preserve any in-flight optimistic transactions not yet returned by Supabase
-      const stillInFlight = getStoredTransactions().filter((t) =>
+      const stillInFlight = getStoredTransactions(accountId).filter((t) =>
         inFlightTempIds.has(t.id)
       );
       const merged = [...stillInFlight, ...transactions];
       // Cache to localStorage for offline fallback
-      saveStoredTransactions(merged);
+      saveStoredTransactions(merged, accountId);
       return merged;
     } finally {
       activeGetExpensesPromise = null;
@@ -139,7 +144,8 @@ export async function getExpenses(): Promise<Transaction[]> {
  * RLS automatically assigns auth.uid() as user_id.
  */
 export async function addExpense(
-  txData: Omit<Transaction, 'id' | 'createdAt'>
+  txData: Omit<Transaction, 'id' | 'createdAt'>,
+  accountId: string = 'default'
 ): Promise<Transaction> {
   if (!isSupabaseConfigured) {
     const localTx: Transaction = {
@@ -147,13 +153,13 @@ export async function addExpense(
       id: `tx-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       createdAt: Date.now(),
     };
-    const current = getStoredTransactions();
+    const current = getStoredTransactions(accountId);
     const updated = [localTx, ...current];
-    saveStoredTransactions(updated);
+    saveStoredTransactions(updated, accountId);
     return localTx;
   }
 
-  const payload = mapTransactionToPayload(txData);
+  const payload = mapTransactionToPayload(txData, accountId);
 
   let { data, error } = await supabase
     .from('expenses')

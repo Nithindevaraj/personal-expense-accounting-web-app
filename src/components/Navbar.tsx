@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   LayoutDashboard,
   ReceiptText,
@@ -12,7 +12,14 @@ import {
   LogIn,
   Sun,
   Moon,
+  ChevronDown,
+  Building2,
+  Check,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
+import type { Account } from '../types';
+import { DEFAULT_ACCOUNT_ID } from '../types';
 import { formatINR } from '../utils/formatters';
 import type { UserProfile } from '../utils/storage';
 import { useAuth } from '../context/AuthContext';
@@ -36,6 +43,12 @@ interface NavbarProps {
   projectCount: number;
   userProfile: UserProfile;
   onOpenProfile: () => void;
+  accounts: Account[];
+  activeAccountId: string;
+  onSwitchAccount: (id: string) => void;
+  onAddAccount: (name: string) => void;
+  onRenameAccount: (id: string, name: string) => void;
+  onDeleteAccount: (id: string) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -45,12 +58,38 @@ export const Navbar: React.FC<NavbarProps> = ({
   netBalance,
   userProfile,
   onOpenProfile,
+  accounts,
+  activeAccountId,
+  onSwitchAccount,
+  onAddAccount,
+  onRenameAccount,
+  onDeleteAccount,
 }) => {
   const { user, signInWithGoogle } = useAuth();
   const [theme, setTheme] = useState<ThemePreference>(() => getStoredTheme());
   const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(() =>
     getSystemPrefersDark()
   );
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const [newAccountName, setNewAccountName] = useState('');
+  const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
+  const [editingAccountName, setEditingAccountName] = useState('');
+  const accountMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isAccountMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(e.target as Node)) {
+        setIsAccountMenuOpen(false);
+        setEditingAccountId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isAccountMenuOpen]);
+
+  const activeAccount =
+    accounts.find((a) => a.id === activeAccountId) || accounts[0] || { id: DEFAULT_ACCOUNT_ID, name: 'Personal' };
 
   useEffect(() => {
     const mq = window.matchMedia?.('(prefers-color-scheme: dark)');
@@ -91,16 +130,148 @@ export const Navbar: React.FC<NavbarProps> = ({
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14 sm:h-15 gap-2">
-            {/* Logo, Title & Profile */}
+            {/* Logo, Account/Company Switcher & Profile */}
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 shrink-0">
-                <Wallet className="w-4 h-4" />
+              <div className="relative flex items-center gap-2 min-w-0" ref={accountMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsAccountMenuOpen((prev) => !prev)}
+                  aria-expanded={isAccountMenuOpen}
+                  aria-haspopup="menu"
+                  className="flex items-center gap-2 px-2 py-1 -ml-1 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer min-w-0 group"
+                  title="Switch or manage accounts / companies"
+                >
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 shrink-0">
+                    <Wallet className="w-4 h-4" />
+                  </div>
+                  <span className="font-bold text-sm sm:text-base text-slate-900 tracking-tight truncate max-w-[115px] sm:max-w-[200px]">
+                    {activeAccount.name}
+                  </span>
+                  <ChevronDown className={`w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 shrink-0 transition-transform ${isAccountMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* Accounts / Company Switcher Dropdown */}
+                {isAccountMenuOpen && (
+                  <div className="absolute left-0 top-full mt-2 w-72 bg-white rounded-2xl border border-slate-200 shadow-2xl p-2.5 z-50 animate-fade-in">
+                    <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Accounts / Companies
+                    </div>
+
+                    <div className="space-y-1 max-h-56 overflow-y-auto my-1">
+                      {accounts.map((acc) => {
+                        const isActive = acc.id === activeAccountId;
+                        const isEditing = editingAccountId === acc.id;
+                        return (
+                          <div
+                            key={acc.id}
+                            className={`flex items-center justify-between gap-1.5 px-2.5 py-2 rounded-xl text-xs transition-colors ${
+                              isActive
+                                ? 'bg-emerald-50 text-emerald-800 font-semibold'
+                                : 'hover:bg-slate-50 text-slate-700'
+                            }`}
+                          >
+                            {isEditing ? (
+                              <form
+                                onSubmit={(e) => {
+                                  e.preventDefault();
+                                  if (editingAccountName.trim()) {
+                                    onRenameAccount(acc.id, editingAccountName.trim());
+                                  }
+                                  setEditingAccountId(null);
+                                }}
+                                className="flex items-center gap-1 flex-1 min-w-0"
+                              >
+                                <input
+                                  type="text"
+                                  value={editingAccountName}
+                                  onChange={(e) => setEditingAccountName(e.target.value)}
+                                  autoFocus
+                                  className="w-full px-2 py-1 text-xs bg-white border border-slate-300 rounded-lg focus:outline-hidden"
+                                />
+                                <button
+                                  type="submit"
+                                  className="px-2 py-1 rounded-lg bg-emerald-600 text-white text-[10px] font-bold cursor-pointer shrink-0"
+                                >
+                                  Save
+                                </button>
+                              </form>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    onSwitchAccount(acc.id);
+                                    setIsAccountMenuOpen(false);
+                                  }}
+                                  className="flex items-center gap-2 flex-1 min-w-0 text-left cursor-pointer"
+                                >
+                                  <Building2 className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-emerald-600' : 'text-slate-400'}`} />
+                                  <span className="truncate">{acc.name}</span>
+                                  {isActive && <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 ml-auto" />}
+                                </button>
+                                <div className="flex items-center gap-0.5 shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingAccountId(acc.id);
+                                      setEditingAccountName(acc.name);
+                                    }}
+                                    className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+                                    title="Rename account"
+                                  >
+                                    <Pencil className="w-3 h-3" />
+                                  </button>
+                                  {acc.id !== DEFAULT_ACCOUNT_ID && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (window.confirm(`Delete account "${acc.name}"?`)) {
+                                          onDeleteAccount(acc.id);
+                                        }
+                                      }}
+                                      className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+                                      title="Delete account"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        if (!newAccountName.trim()) return;
+                        onAddAccount(newAccountName.trim());
+                        setNewAccountName('');
+                        setIsAccountMenuOpen(false);
+                      }}
+                      className="flex items-center gap-1.5 pt-2 mt-1.5 border-t border-slate-100"
+                    >
+                      <input
+                        type="text"
+                        value={newAccountName}
+                        onChange={(e) => setNewAccountName(e.target.value)}
+                        placeholder="New company / account..."
+                        className="flex-1 min-w-0 px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden"
+                      />
+                      <button
+                        type="submit"
+                        className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer shrink-0"
+                      >
+                        Add
+                      </button>
+                    </form>
+                  </div>
+                )}
               </div>
+
               <div className="flex items-center gap-2 min-w-0">
-                <span className="font-bold text-sm sm:text-lg text-slate-900 tracking-tight truncate">
-                  <span className="sm:hidden">Accounts</span>
-                  <span className="hidden sm:inline">Personal Accounting</span>
-                </span>
 
                 {/* Profile Icon / Photo Button */}
                 <button

@@ -1,7 +1,11 @@
 import {
+  type Account,
+  DEFAULT_ACCOUNT_ID,
+  DEFAULT_ACCOUNTS,
   DEFAULT_EXPENSE_CATEGORIES,
   DEFAULT_INCOME_CATEGORIES,
   DEFAULT_PROJECTS,
+  createDefaultProjectsForAccount,
   type Project,
   type Transaction,
 } from '../types';
@@ -12,7 +16,51 @@ const STORAGE_KEYS = {
   INCOME_CATEGORIES: 'personal_accounting_income_categories_v1',
   EXPENSE_CATEGORIES: 'personal_accounting_expense_categories_v1',
   USER_PROFILE: 'personal_accounting_user_profile_v1',
+  ACCOUNTS: 'personal_accounting_accounts_v1',
+  ACTIVE_ACCOUNT_ID: 'personal_accounting_active_account_v1',
 };
+
+function scopedKey(baseKey: string, accountId: string = DEFAULT_ACCOUNT_ID): string {
+  return accountId === DEFAULT_ACCOUNT_ID ? baseKey : `${baseKey}_${accountId}`;
+}
+
+export function getStoredAccounts(): Account[] {
+  try {
+    const data = localStorage.getItem(STORAGE_KEYS.ACCOUNTS);
+    if (!data) {
+      saveStoredAccounts(DEFAULT_ACCOUNTS);
+      return DEFAULT_ACCOUNTS;
+    }
+    const parsed = JSON.parse(data);
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_ACCOUNTS;
+  } catch {
+    return DEFAULT_ACCOUNTS;
+  }
+}
+
+export function saveStoredAccounts(accounts: Account[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(accounts));
+  } catch (err) {
+    console.error('Error saving accounts:', err);
+  }
+}
+
+export function getActiveAccountId(): string {
+  try {
+    return localStorage.getItem(STORAGE_KEYS.ACTIVE_ACCOUNT_ID) || DEFAULT_ACCOUNT_ID;
+  } catch {
+    return DEFAULT_ACCOUNT_ID;
+  }
+}
+
+export function saveActiveAccountId(accountId: string): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.ACTIVE_ACCOUNT_ID, accountId);
+  } catch (err) {
+    console.error('Error saving active account ID:', err);
+  }
+}
 
 export interface UserProfile {
   name: string;
@@ -30,26 +78,29 @@ export const DEFAULT_USER_PROFILE: UserProfile = {
 // Initial default transactions (empty by default)
 export const SAMPLE_TRANSACTIONS: Transaction[] = [];
 
-export function getStoredTransactions(): Transaction[] {
+export function getStoredTransactions(accountId: string = DEFAULT_ACCOUNT_ID): Transaction[] {
   try {
-    let data = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
+    const key = scopedKey(STORAGE_KEYS.TRANSACTIONS, accountId);
+    const data = localStorage.getItem(key);
     if (!data) {
-      // Migrate from v1 if present, stripping out all demo seed items
-      const v1Data = localStorage.getItem('personal_accounting_transactions_v1');
-      if (v1Data) {
-        try {
-          const parsedV1 = JSON.parse(v1Data);
-          if (Array.isArray(parsedV1)) {
-            const userOnly = parsedV1.filter((tx: Transaction) => !tx.id?.startsWith('tx-seed-'));
-            saveStoredTransactions(userOnly);
-            localStorage.removeItem('personal_accounting_transactions_v1');
-            return userOnly;
+      if (accountId === DEFAULT_ACCOUNT_ID) {
+        // Migrate from v1 if present, stripping out all demo seed items
+        const v1Data = localStorage.getItem('personal_accounting_transactions_v1');
+        if (v1Data) {
+          try {
+            const parsedV1 = JSON.parse(v1Data);
+            if (Array.isArray(parsedV1)) {
+              const userOnly = parsedV1.filter((tx: Transaction) => !tx.id?.startsWith('tx-seed-'));
+              saveStoredTransactions(userOnly, accountId);
+              localStorage.removeItem('personal_accounting_transactions_v1');
+              return userOnly;
+            }
+          } catch {
+            // ignore
           }
-        } catch {
-          // ignore
         }
       }
-      saveStoredTransactions([]);
+      saveStoredTransactions([], accountId);
       return [];
     }
     const parsed = JSON.parse(data);
@@ -59,7 +110,7 @@ export function getStoredTransactions(): Transaction[] {
       (tx: Transaction) => !tx.id?.startsWith('tx-seed-')
     );
     if (cleaned.length !== parsed.length) {
-      saveStoredTransactions(cleaned);
+      saveStoredTransactions(cleaned, accountId);
     }
     return cleaned;
   } catch (err) {
@@ -68,32 +119,39 @@ export function getStoredTransactions(): Transaction[] {
   }
 }
 
-export function saveStoredTransactions(transactions: Transaction[]): void {
+export function saveStoredTransactions(
+  transactions: Transaction[],
+  accountId: string = DEFAULT_ACCOUNT_ID
+): void {
   try {
-    localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
+    localStorage.setItem(scopedKey(STORAGE_KEYS.TRANSACTIONS, accountId), JSON.stringify(transactions));
   } catch (err) {
     console.error('Error saving transactions:', err);
   }
 }
 
-export function getStoredProjects(): Project[] {
+export function getStoredProjects(accountId: string = DEFAULT_ACCOUNT_ID): Project[] {
+  const defaults = createDefaultProjectsForAccount(accountId);
   try {
-    const data = localStorage.getItem(STORAGE_KEYS.PROJECTS);
+    const data = localStorage.getItem(scopedKey(STORAGE_KEYS.PROJECTS, accountId));
     if (!data) {
-      saveStoredProjects(DEFAULT_PROJECTS);
-      return DEFAULT_PROJECTS;
+      saveStoredProjects(defaults, accountId);
+      return defaults;
     }
     const parsed = JSON.parse(data);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_PROJECTS;
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : defaults;
   } catch (err) {
     console.error('Error loading stored projects:', err);
-    return DEFAULT_PROJECTS;
+    return defaults;
   }
 }
 
-export function saveStoredProjects(projects: Project[]): void {
+export function saveStoredProjects(
+  projects: Project[],
+  accountId: string = DEFAULT_ACCOUNT_ID
+): void {
   try {
-    localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(projects));
+    localStorage.setItem(scopedKey(STORAGE_KEYS.PROJECTS, accountId), JSON.stringify(projects));
   } catch (err) {
     console.error('Error saving projects:', err);
   }
@@ -168,9 +226,9 @@ export function saveUserProfile(profile: UserProfile): void {
   }
 }
 
-export function resetToDefaults(): void {
-  saveStoredTransactions(SAMPLE_TRANSACTIONS);
-  saveStoredProjects(DEFAULT_PROJECTS);
+export function resetToDefaults(accountId: string = DEFAULT_ACCOUNT_ID): void {
+  saveStoredTransactions(SAMPLE_TRANSACTIONS, accountId);
+  saveStoredProjects(createDefaultProjectsForAccount(accountId), accountId);
   saveStoredIncomeCategories(DEFAULT_INCOME_CATEGORIES);
   saveStoredExpenseCategories(DEFAULT_EXPENSE_CATEGORIES);
   saveUserProfile(DEFAULT_USER_PROFILE);

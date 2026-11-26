@@ -53,11 +53,37 @@ export const DEFAULT_EXPENSE_CATEGORIES: string[] = [
   'Lends Returning',
 ];
 
+export interface Account {
+  id: string;
+  name: string;
+  createdAt?: number;
+}
+
+export const DEFAULT_ACCOUNT_ID = 'default';
+export const DEFAULT_ACCOUNTS: Account[] = [
+  { id: DEFAULT_ACCOUNT_ID, name: 'Personal' },
+];
+
 export const GENERAL_PROJECT_ID = 'proj-general';
 export const GENERAL_PROJECT_NAME = 'General Transactions';
 
 export function isGeneralProject(project: Pick<Project, 'id' | 'name'>): boolean {
-  return project.id === GENERAL_PROJECT_ID || project.name === GENERAL_PROJECT_NAME;
+  return (
+    project.id === GENERAL_PROJECT_ID ||
+    project.id.endsWith(`-${GENERAL_PROJECT_ID}`) ||
+    project.name === GENERAL_PROJECT_NAME
+  );
+}
+
+export function createDefaultProjectsForAccount(accountId: string): Project[] {
+  if (accountId === DEFAULT_ACCOUNT_ID) {
+    return DEFAULT_PROJECTS;
+  }
+  return DEFAULT_PROJECTS.map((p) => ({
+    ...p,
+    id: `${accountId}-${p.id}`,
+    parentId: p.parentId ? `${accountId}-${p.parentId}` : null,
+  }));
 }
 
 export const DEFAULT_PROJECTS: Project[] = [
