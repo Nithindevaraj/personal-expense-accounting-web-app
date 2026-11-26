@@ -443,11 +443,16 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ transactions, proj
                     #{idx + 1}
                   </span>
                   <div className="min-w-0">
-                    <span className="text-xs font-bold text-slate-900 block truncate max-w-[120px] xs:max-w-[180px] sm:max-w-[200px]">
-                      {t.description || t.category}
+                    <span className="text-xs font-bold text-slate-900 block truncate max-w-[140px] xs:max-w-[200px] sm:max-w-[220px]">
+                      {t.tag}
                     </span>
+                    {t.subTag && (
+                      <span className="text-[11px] font-semibold text-indigo-700 block truncate max-w-[140px] xs:max-w-[200px] sm:max-w-[220px]">
+                        {t.subTag}
+                      </span>
+                    )}
                     <span className="text-[10px] sm:text-[11px] text-slate-500 block truncate">
-                      {formatDate(t.date)} • {t.tag}
+                      {formatDate(t.date)}
                     </span>
                   </div>
                 </div>
