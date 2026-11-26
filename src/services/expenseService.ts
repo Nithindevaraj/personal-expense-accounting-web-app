@@ -56,6 +56,17 @@ export function mapTransactionToPayload(tx: Omit<Transaction, 'id' | 'createdAt'
   };
 }
 
+const inFlightTempIds = new Set<string>();
+let activeGetExpensesPromise: Promise<Transaction[]> | null = null;
+
+export function markTxInFlight(tempId: string): void {
+  inFlightTempIds.add(tempId);
+}
+
+export function clearTxInFlight(tempId: string): void {
+  inFlightTempIds.delete(tempId);
+}
+
 /**
  * Fetch user's expenses ordered by date descending.
  * PostgreSQL Row-Level Security automatically filters rows where user_id = auth.uid()
@@ -65,37 +76,62 @@ export async function getExpenses(): Promise<Transaction[]> {
     return getStoredTransactions();
   }
 
-  // Push any unsynced local transactions (e.g. from offline/failed writes) to Supabase first
-  const localTxs = getStoredTransactions();
-  const pendingLocal = localTxs.filter(
-    (t) => t.id.startsWith('tx-temp-') || t.id.startsWith('tx-')
-  );
-  if (pendingLocal.length > 0) {
-    for (const pending of pendingLocal) {
-      try {
-        const { id: _id, createdAt: _createdAt, ...payload } = pending;
-        await addExpense(payload);
-      } catch (err) {
-        console.warn('Could not sync pending local transaction:', err);
+  if (activeGetExpensesPromise) {
+    return activeGetExpensesPromise;
+  }
+
+  activeGetExpensesPromise = (async () => {
+    try {
+      // Push only truly stale/offline local transactions (skip any currently being uploaded)
+      const localTxs = getStoredTransactions();
+      const pendingLocal = localTxs.filter(
+        (t) =>
+          (t.id.startsWith('tx-temp-') || t.id.startsWith('tx-')) &&
+          !inFlightTempIds.has(t.id)
+      );
+      if (pendingLocal.length > 0) {
+        for (const pending of pendingLocal) {
+          inFlightTempIds.add(pending.id);
+          try {
+            const { id: _id, createdAt: _createdAt, ...payload } = pending;
+            await addExpense(payload);
+            // Remove this pending temp item from localStorage immediately so it can't be re-uploaded
+            const latestLocal = getStoredTransactions().filter((t) => t.id !== pending.id);
+            saveStoredTransactions(latestLocal);
+          } catch (err) {
+            console.warn('Could not sync pending local transaction:', err);
+          } finally {
+            inFlightTempIds.delete(pending.id);
+          }
+        }
       }
+
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .order('date', { ascending: false });
+
+      if (error) {
+        console.error('Failed to fetch expenses from Supabase:', error.message);
+        // Fallback to local storage on error
+        return getStoredTransactions();
+      }
+
+      const transactions = (data as DbExpenseRow[]).map(mapRowToTransaction);
+      // Preserve any in-flight optimistic transactions not yet returned by Supabase
+      const stillInFlight = getStoredTransactions().filter((t) =>
+        inFlightTempIds.has(t.id)
+      );
+      const merged = [...stillInFlight, ...transactions];
+      // Cache to localStorage for offline fallback
+      saveStoredTransactions(merged);
+      return merged;
+    } finally {
+      activeGetExpensesPromise = null;
     }
-  }
+  })();
 
-  const { data, error } = await supabase
-    .from('expenses')
-    .select('*')
-    .order('date', { ascending: false });
-
-  if (error) {
-    console.error('Failed to fetch expenses from Supabase:', error.message);
-    // Fallback to local storage on error
-    return getStoredTransactions();
-  }
-
-  const transactions = (data as DbExpenseRow[]).map(mapRowToTransaction);
-  // Cache to localStorage for offline fallback
-  saveStoredTransactions(transactions);
-  return transactions;
+  return activeGetExpensesPromise;
 }
 
 /**

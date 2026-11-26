@@ -43,6 +43,8 @@ import {
   updateExpense,
   deleteExpense,
   batchDeleteExpenses,
+  markTxInFlight,
+  clearTxInFlight,
 } from './services/expenseService';
 import {
   getProjectsFromSupabase,
@@ -303,6 +305,7 @@ export const App: React.FC = () => {
         id: tempId,
         createdAt: Date.now(),
       };
+      markTxInFlight(tempId);
       const updated = [tempTx, ...transactions];
       setTransactions(updated);
       saveStoredTransactions(updated);
@@ -311,12 +314,18 @@ export const App: React.FC = () => {
       try {
         const savedTx = await addExpense(txData);
         setTransactions((prev) => {
-          const next = prev.map((t) => (t.id === tempId ? savedTx : t));
+          const withoutDup = prev.filter((t) => t.id !== savedTx.id);
+          const hasTemp = withoutDup.some((t) => t.id === tempId);
+          const next = hasTemp
+            ? withoutDup.map((t) => (t.id === tempId ? savedTx : t))
+            : [savedTx, ...withoutDup];
           saveStoredTransactions(next);
           return next;
         });
       } catch (err) {
         console.error('Error adding expense to Supabase:', err);
+      } finally {
+        clearTxInFlight(tempId);
       }
     }
   };
