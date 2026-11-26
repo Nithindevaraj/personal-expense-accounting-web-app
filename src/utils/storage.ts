@@ -101,10 +101,10 @@ export function saveStoredProjects(projects: Project[]): void {
 
 export function getStoredIncomeCategories(): string[] {
   try {
-    if (localStorage.getItem('personal_accounting_cat_version') !== 'v2') {
+    if (localStorage.getItem('personal_accounting_cat_version') !== 'v3') {
       saveStoredIncomeCategories(DEFAULT_INCOME_CATEGORIES);
       saveStoredExpenseCategories(DEFAULT_EXPENSE_CATEGORIES);
-      localStorage.setItem('personal_accounting_cat_version', 'v2');
+      localStorage.setItem('personal_accounting_cat_version', 'v3');
       return DEFAULT_INCOME_CATEGORIES;
     }
     const data = localStorage.getItem(STORAGE_KEYS.INCOME_CATEGORIES);

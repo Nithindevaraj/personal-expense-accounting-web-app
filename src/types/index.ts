@@ -38,6 +38,8 @@ export const DEFAULT_INCOME_CATEGORIES: string[] = [
   'Returns',
   'Refund',
   'Gifts',
+  'Borrowing',
+  'Borrow Receiving',
 ];
 
 export const DEFAULT_EXPENSE_CATEGORIES: string[] = [
@@ -47,6 +49,8 @@ export const DEFAULT_EXPENSE_CATEGORIES: string[] = [
   'Utilities',
   'Purchase',
   'Entertainment',
+  'Lending',
+  'Lends Returning',
 ];
 
 // Default Project Tags from the Google Sheet

@@ -26,12 +26,12 @@ export async function getCategoriesFromSupabase(): Promise<CloudCategories> {
   }
 
   try {
-    if (localStorage.getItem('personal_accounting_cat_cloud_v2') !== '1') {
+    if (localStorage.getItem('personal_accounting_cat_cloud_v3') !== '1') {
       await saveCategoriesToSupabase({
         incomeCategories: localIncome,
         expenseCategories: localExpense,
       });
-      localStorage.setItem('personal_accounting_cat_cloud_v2', '1');
+      localStorage.setItem('personal_accounting_cat_cloud_v3', '1');
       return { incomeCategories: localIncome, expenseCategories: localExpense };
     }
   } catch {
