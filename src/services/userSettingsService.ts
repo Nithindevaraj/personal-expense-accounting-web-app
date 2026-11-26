@@ -1,12 +1,14 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { type Account, DEFAULT_ACCOUNTS } from '../types';
+import { type Account, type RecurringTransaction, DEFAULT_ACCOUNTS } from '../types';
 import {
   getStoredAccounts,
   getStoredExpenseCategories,
   getStoredIncomeCategories,
+  getStoredRecurringTransactions,
   saveStoredAccounts,
   saveStoredExpenseCategories,
   saveStoredIncomeCategories,
+  saveStoredRecurringTransactions,
 } from '../utils/storage';
 
 interface DbUserSettingsRow {
@@ -146,5 +148,53 @@ export async function saveAccountsToSupabase(accounts: Account[]): Promise<void>
 
   if (error) {
     console.error('Failed to save accounts to Supabase:', error.message);
+  }
+}
+
+export async function getRecurringFromSupabase(): Promise<RecurringTransaction[]> {
+  const localRecurring = getStoredRecurringTransactions();
+  if (!isSupabaseConfigured) return localRecurring;
+
+  const { data, error } = await supabase
+    .from('user_settings')
+    .select('recurring_transactions')
+    .maybeSingle();
+
+  if (error) {
+    console.error('Failed to fetch recurring transactions from Supabase:', error.message);
+    return localRecurring;
+  }
+
+  const cloudRecurring = Array.isArray(
+    (data as { recurring_transactions?: unknown } | null)?.recurring_transactions
+  )
+    ? ((data as { recurring_transactions: RecurringTransaction[] }).recurring_transactions)
+    : [];
+
+  if (cloudRecurring.length === 0 && localRecurring.length > 0) {
+    await saveRecurringToSupabase(localRecurring);
+    return localRecurring;
+  }
+
+  saveStoredRecurringTransactions(cloudRecurring);
+  return cloudRecurring;
+}
+
+export async function saveRecurringToSupabase(items: RecurringTransaction[]): Promise<void> {
+  if (!isSupabaseConfigured) return;
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { error } = await supabase
+    .from('user_settings')
+    .upsert([{ user_id: user.id, recurring_transactions: items }], {
+      onConflict: 'user_id',
+    });
+
+  if (error) {
+    console.error('Failed to save recurring transactions to Supabase:', error.message);
   }
 }

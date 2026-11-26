@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS public.user_settings (
     expense_categories JSONB DEFAULT '[]'::JSONB,
     accounts JSONB DEFAULT '[{"id":"default","name":"Personal"}]'::JSONB,
     active_account_id TEXT DEFAULT 'default',
+    recurring_transactions JSONB DEFAULT '[]'::JSONB,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 

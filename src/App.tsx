@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Plus, Loader2 } from 'lucide-react';
-import type { Account, Project, Transaction, TransactionType } from './types';
+import type { Account, Project, RecurringTransaction, Transaction, TransactionType } from './types';
 import {
   DEFAULT_ACCOUNT_ID,
   DEFAULT_EXPENSE_CATEGORIES,
@@ -16,6 +16,7 @@ import {
   getStoredExpenseCategories,
   getStoredIncomeCategories,
   getStoredProjects,
+  getStoredRecurringTransactions,
   getStoredTransactions,
   getUserProfile,
   resetToDefaults,
@@ -24,6 +25,7 @@ import {
   saveStoredExpenseCategories,
   saveStoredIncomeCategories,
   saveStoredProjects,
+  saveStoredRecurringTransactions,
   saveStoredTransactions,
   saveUserProfile,
 } from './utils/storage';
@@ -59,8 +61,10 @@ import {
 import {
   getAccountsFromSupabase,
   getCategoriesFromSupabase,
+  getRecurringFromSupabase,
   saveAccountsToSupabase,
   saveCategoriesToSupabase,
+  saveRecurringToSupabase,
 } from './services/userSettingsService';
 
 export const App: React.FC = () => {
@@ -127,6 +131,10 @@ export const App: React.FC = () => {
   const [incomeCategories, setIncomeCategories] = useState<string[]>(getStoredIncomeCategories);
   const [expenseCategories, setExpenseCategories] = useState<string[]>(getStoredExpenseCategories);
   const [userProfile, setUserProfile] = useState<UserProfile>(getUserProfile);
+  const [recurringTransactions, setRecurringTransactions] = useState<RecurringTransaction[]>(
+    getStoredRecurringTransactions
+  );
+  const processingRecurringRef = useRef(false);
 
   // Modals
   const [isTxModalOpen, setIsTxModalOpen] = useState<boolean>(() => {
@@ -208,14 +216,16 @@ export const App: React.FC = () => {
         getProjectsFromSupabase(activeAccountId),
         getCategoriesFromSupabase(),
         getAccountsFromSupabase(),
+        getRecurringFromSupabase(),
       ])
-        .then(([fetchedTx, fetchedProjects, fetchedCats, fetchedAccounts]) => {
+        .then(([fetchedTx, fetchedProjects, fetchedCats, fetchedAccounts, fetchedRecurring]) => {
           if (!isMounted) return;
           setTransactions(fetchedTx);
           setProjects(fetchedProjects);
           setIncomeCategories(fetchedCats.incomeCategories);
           setExpenseCategories(fetchedCats.expenseCategories);
           setAccounts(fetchedAccounts);
+          setRecurringTransactions(fetchedRecurring);
         })
         .catch((err) => {
           console.error('Error syncing data from Supabase:', err);
@@ -290,12 +300,17 @@ export const App: React.FC = () => {
             filter: `user_id=eq.${user.id}`,
           },
           () => {
-            Promise.all([getCategoriesFromSupabase(), getAccountsFromSupabase()])
-              .then(([fetchedCats, fetchedAccounts]) => {
+            Promise.all([
+              getCategoriesFromSupabase(),
+              getAccountsFromSupabase(),
+              getRecurringFromSupabase(),
+            ])
+              .then(([fetchedCats, fetchedAccounts, fetchedRecurring]) => {
                 if (!isMounted) return;
                 setIncomeCategories(fetchedCats.incomeCategories);
                 setExpenseCategories(fetchedCats.expenseCategories);
                 setAccounts(fetchedAccounts);
+                setRecurringTransactions(fetchedRecurring);
               })
               .catch(() => {});
           }
@@ -582,6 +597,85 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleAddRecurring = (
+    item: Omit<RecurringTransaction, 'id' | 'accountId' | 'createdAt' | 'lastGeneratedMonth'>
+  ) => {
+    const newRule: RecurringTransaction = {
+      ...item,
+      id: `rec-${Date.now()}`,
+      accountId: activeAccountId,
+      createdAt: Date.now(),
+    };
+    setRecurringTransactions((prev) => {
+      const updated = [...prev, newRule];
+      saveStoredRecurringTransactions(updated);
+      void saveRecurringToSupabase(updated);
+      return updated;
+    });
+  };
+
+  const handleDeleteRecurring = (id: string) => {
+    setRecurringTransactions((prev) => {
+      const updated = prev.filter((r) => r.id !== id);
+      saveStoredRecurringTransactions(updated);
+      void saveRecurringToSupabase(updated);
+      return updated;
+    });
+  };
+
+  // Auto-generate due recurring transactions for the current month
+  useEffect(() => {
+    if (isDataLoading || processingRecurringRef.current) return;
+    if (recurringTransactions.length === 0) return;
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const monthIdx = now.getMonth();
+    const currentMonth = `${year}-${String(monthIdx + 1).padStart(2, '0')}`;
+    const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+
+    const dueRules = recurringTransactions.filter((r) => {
+      if (r.accountId !== activeAccountId) return false;
+      const effectiveDay = Math.min(r.dayOfMonth, daysInMonth);
+      return now.getDate() >= effectiveDay && r.lastGeneratedMonth !== currentMonth;
+    });
+
+    if (dueRules.length === 0) return;
+    processingRecurringRef.current = true;
+
+    const dueIds = new Set(dueRules.map((r) => r.id));
+    const updatedRules = recurringTransactions.map((r) =>
+      dueIds.has(r.id) ? { ...r, lastGeneratedMonth: currentMonth } : r
+    );
+    setRecurringTransactions(updatedRules);
+    saveStoredRecurringTransactions(updatedRules);
+    void saveRecurringToSupabase(updatedRules);
+
+    (async () => {
+      try {
+        for (let i = 0; i < dueRules.length; i++) {
+          const rule = dueRules[i];
+          const effectiveDay = Math.min(rule.dayOfMonth, daysInMonth);
+          const dateStr = `${currentMonth}-${String(effectiveDay).padStart(2, '0')}`;
+          await handleSaveTransaction({
+            slNo: nextSlNo + i,
+            date: dateStr,
+            type: rule.type,
+            category: rule.category,
+            amount: rule.amount,
+            tag: rule.tag,
+            subTag: rule.subTag || null,
+            description: rule.description,
+            notes: rule.notes || '',
+            attachments: [],
+          });
+        }
+      } finally {
+        processingRecurringRef.current = false;
+      }
+    })();
+  }, [recurringTransactions, activeAccountId, isDataLoading]);
+
   const handleResetToDefaults = async () => {
     const prevTxIds = transactions.map((t) => t.id);
     const prevProjectIds = projects.map((p) => p.id);
@@ -750,6 +844,11 @@ export const App: React.FC = () => {
             onImportTransactions={handleImportTransactions}
             onClearAllData={handleClearAllData}
             onResetToDefaults={handleResetToDefaults}
+            recurringTransactions={recurringTransactions.filter(
+              (r) => r.accountId === activeAccountId
+            )}
+            onAddRecurring={handleAddRecurring}
+            onDeleteRecurring={handleDeleteRecurring}
           />
         )}
       </main>

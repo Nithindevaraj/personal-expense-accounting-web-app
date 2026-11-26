@@ -11,8 +11,11 @@ import {
   RotateCcw,
   ChevronDown,
   ChevronUp,
+  Repeat,
+  Plus,
 } from 'lucide-react';
-import type { Project, Transaction } from '../types';
+import type { Project, RecurringTransaction, Transaction, TransactionType } from '../types';
+import { formatINR } from '../utils/formatters';
 import {
   type UserProfile,
   saveStoredExpenseCategories,
@@ -36,6 +39,26 @@ interface SettingsViewProps {
   onImportTransactions: (imported: Transaction[]) => void;
   onClearAllData: () => void;
   onResetToDefaults: () => void;
+  recurringTransactions: RecurringTransaction[];
+  onAddRecurring: (
+    item: Omit<RecurringTransaction, 'id' | 'accountId' | 'createdAt' | 'lastGeneratedMonth'>
+  ) => void;
+  onDeleteRecurring: (id: string) => void;
+}
+
+function formatDayOrdinal(day: number): string {
+  const mod100 = day % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${day}th`;
+  switch (day % 10) {
+    case 1:
+      return `${day}st`;
+    case 2:
+      return `${day}nd`;
+    case 3:
+      return `${day}rd`;
+    default:
+      return `${day}th`;
+  }
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -50,6 +73,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onImportTransactions,
   onClearAllData,
   onResetToDefaults,
+  recurringTransactions,
+  onAddRecurring,
+  onDeleteRecurring,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
@@ -58,11 +84,56 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [newExpenseCat, setNewExpenseCat] = useState('');
   const [notification, setNotification] = useState<string | null>(null);
   const [openSections, setOpenSections] = useState({
+    recurring: false,
     importExport: false,
     incomeCats: false,
     expenseCats: false,
     maintenance: false,
   });
+
+  const topProjects = projects.filter((p) => !p.parentId);
+  const [recType, setRecType] = useState<TransactionType>('Expense');
+  const [recDay, setRecDay] = useState('7');
+  const [recAmount, setRecAmount] = useState('');
+  const [recTag, setRecTag] = useState(topProjects[0]?.name || 'General Transactions');
+  const [recSubTag, setRecSubTag] = useState<string | null>(null);
+  const [recCategory, setRecCategory] = useState(expenseCategories[0] || 'Rents');
+  const [recDescription, setRecDescription] = useState('');
+  const [recNotes, setRecNotes] = useState('');
+
+  const handleRecTypeChange = (nextType: TransactionType) => {
+    setRecType(nextType);
+    const list = nextType === 'Income' ? incomeCategories : expenseCategories;
+    if (!list.includes(recCategory)) {
+      setRecCategory(list[0] || (nextType === 'Income' ? 'Salary' : 'Food'));
+    }
+  };
+
+  const handleCreateRecurring = (e: React.FormEvent) => {
+    e.preventDefault();
+    const parsedAmt = parseFloat(recAmount);
+    const parsedDay = Math.min(31, Math.max(1, parseInt(recDay, 10) || 1));
+    if (isNaN(parsedAmt) || parsedAmt <= 0) {
+      alert('Please enter a valid positive amount.');
+      return;
+    }
+
+    onAddRecurring({
+      type: recType,
+      dayOfMonth: parsedDay,
+      amount: parsedAmt,
+      tag: recTag || topProjects[0]?.name || 'General Transactions',
+      subTag: recSubTag || null,
+      category: recCategory || (recType === 'Income' ? 'Salary' : 'Food'),
+      description: recDescription.trim(),
+      notes: recNotes.trim(),
+    });
+
+    setRecAmount('');
+    setRecDescription('');
+    setRecNotes('');
+    showNotification(`Recurring ${recType.toLowerCase()} added for ${formatDayOrdinal(parsedDay)} of every month`);
+  };
 
   const toggleSection = (key: keyof typeof openSections) => {
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -217,6 +288,240 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <span>{notification}</span>
         </div>
       )}
+
+      {/* Recurring Transactions Card */}
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
+        <button
+          type="button"
+          onClick={() => toggleSection('recurring')}
+          aria-expanded={openSections.recurring}
+          className="w-full flex items-center justify-between gap-2 text-left cursor-pointer"
+        >
+          <div className="flex items-center gap-2">
+            <Repeat className="w-5 h-5 text-indigo-600 shrink-0" />
+            <h2 className="text-sm sm:text-base font-bold text-slate-900">
+              Recurring Transactions ({recurringTransactions.length})
+            </h2>
+          </div>
+          {openSections.recurring ? (
+            <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+          )}
+        </button>
+
+        {openSections.recurring && (
+          <div className="pt-4 mt-3 border-t border-slate-100 space-y-4">
+            <form onSubmit={handleCreateRecurring} className="space-y-3 bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleRecTypeChange('Income')}
+                  className={`py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                    recType === 'Income'
+                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  Income
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRecTypeChange('Expense')}
+                  className={`py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                    recType === 'Expense'
+                      ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
+                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  Expense
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                    Day of Month (1–31) *
+                  </label>
+                  <select
+                    value={recDay}
+                    onChange={(e) => setRecDay(e.target.value)}
+                    className="w-full px-3 py-2 text-base sm:text-xs bg-white border border-slate-200 rounded-xl font-semibold text-slate-800"
+                  >
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                      <option key={d} value={String(d)}>
+                        {formatDayOrdinal(d)} of every month
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                    Amount (₹) *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="0.01"
+                    step="0.01"
+                    value={recAmount}
+                    onChange={(e) => setRecAmount(e.target.value)}
+                    placeholder="e.g. 5000"
+                    className="w-full px-3 py-2 text-base sm:text-xs bg-white border border-slate-200 rounded-xl font-semibold text-slate-800"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                    Project *
+                  </label>
+                  <select
+                    value={recSubTag ? `${recTag}:::${recSubTag}` : recTag}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val.includes(':::')) {
+                        const [pName, sName] = val.split(':::');
+                        setRecTag(pName);
+                        setRecSubTag(sName);
+                      } else {
+                        setRecTag(val);
+                        setRecSubTag(null);
+                      }
+                    }}
+                    className="w-full px-3 py-2 text-base sm:text-xs bg-white border border-slate-200 rounded-xl font-semibold text-slate-800"
+                  >
+                    {topProjects.map((p) => {
+                      const children = projects.filter((sub) => sub.parentId === p.id);
+                      return (
+                        <React.Fragment key={p.id}>
+                          <option value={p.name}>{p.name}</option>
+                          {children.map((sub) => (
+                            <option key={sub.id} value={`${p.name}:::${sub.name}`}>
+                              ↳ {p.name} / {sub.name}
+                            </option>
+                          ))}
+                        </React.Fragment>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                    Category *
+                  </label>
+                  <select
+                    value={recCategory}
+                    onChange={(e) => setRecCategory(e.target.value)}
+                    className="w-full px-3 py-2 text-base sm:text-xs bg-white border border-slate-200 rounded-xl font-semibold text-slate-800"
+                  >
+                    {(recType === 'Income' ? incomeCategories : expenseCategories).map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                    Description
+                  </label>
+                  <input
+                    type="text"
+                    value={recDescription}
+                    onChange={(e) => setRecDescription(e.target.value)}
+                    placeholder="e.g. Monthly office rent, Salary"
+                    className="w-full px-3 py-2 text-base sm:text-xs bg-white border border-slate-200 rounded-xl font-medium text-slate-800"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                    Notes (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={recNotes}
+                    onChange={(e) => setRecNotes(e.target.value)}
+                    placeholder="Optional reference notes"
+                    className="w-full px-3 py-2 text-base sm:text-xs bg-white border border-slate-200 rounded-xl font-medium text-slate-800"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold cursor-pointer shadow-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Recurring Transaction</span>
+                </button>
+              </div>
+            </form>
+
+            {recurringTransactions.length > 0 && (
+              <div className="space-y-2">
+                {recurringTransactions.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+                            item.type === 'Income'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-rose-100 text-rose-800'
+                          }`}
+                        >
+                          {item.type}
+                        </span>
+                        <span className="font-bold text-slate-900">
+                          {formatDayOrdinal(item.dayOfMonth)} of every month
+                        </span>
+                        <span className="text-slate-500">•</span>
+                        <span className="font-semibold text-indigo-700">
+                          {item.subTag ? `${item.tag} / ${item.subTag}` : item.tag}
+                        </span>
+                        <span className="text-slate-500">•</span>
+                        <span className="text-slate-600">{item.category}</span>
+                      </div>
+                      {(item.description || item.notes) && (
+                        <p className="text-[11px] text-slate-500 mt-1 truncate">
+                          {item.description}
+                          {item.description && item.notes ? ' — ' : ''}
+                          {item.notes}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2.5 shrink-0">
+                      <span
+                        className={`font-bold ${
+                          item.type === 'Income' ? 'text-emerald-700' : 'text-rose-700'
+                        }`}
+                      >
+                        {formatINR(item.amount)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => onDeleteRecurring(item.id)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+                        title="Delete recurring transaction"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Import / Export Card */}
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">

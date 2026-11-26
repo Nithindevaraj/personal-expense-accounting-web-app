@@ -59,6 +59,21 @@ export interface Account {
   createdAt?: number;
 }
 
+export interface RecurringTransaction {
+  id: string;
+  accountId: string;
+  type: TransactionType;
+  dayOfMonth: number;
+  amount: number;
+  tag: string;
+  subTag?: string | null;
+  category: string;
+  description: string;
+  notes?: string;
+  lastGeneratedMonth?: string;
+  createdAt: number;
+}
+
 export const DEFAULT_ACCOUNT_ID = 'default';
 export const DEFAULT_ACCOUNTS: Account[] = [
   { id: DEFAULT_ACCOUNT_ID, name: 'Personal' },

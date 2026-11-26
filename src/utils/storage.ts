@@ -1,5 +1,6 @@
 import {
   type Account,
+  type RecurringTransaction,
   DEFAULT_ACCOUNT_ID,
   DEFAULT_ACCOUNTS,
   DEFAULT_EXPENSE_CATEGORIES,
@@ -17,7 +18,27 @@ const STORAGE_KEYS = {
   USER_PROFILE: 'personal_accounting_user_profile_v1',
   ACCOUNTS: 'personal_accounting_accounts_v1',
   ACTIVE_ACCOUNT_ID: 'personal_accounting_active_account_v1',
+  RECURRING: 'personal_accounting_recurring_v1',
 };
+
+export function getStoredRecurringTransactions(): RecurringTransaction[] {
+  try {
+    const data = localStorage.getItem(STORAGE_KEYS.RECURRING);
+    if (!data) return [];
+    const parsed = JSON.parse(data);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveStoredRecurringTransactions(items: RecurringTransaction[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.RECURRING, JSON.stringify(items));
+  } catch (err) {
+    console.error('Error saving recurring transactions:', err);
+  }
+}
 
 function scopedKey(baseKey: string, accountId: string = DEFAULT_ACCOUNT_ID): string {
   return accountId === DEFAULT_ACCOUNT_ID ? baseKey : `${baseKey}_${accountId}`;
