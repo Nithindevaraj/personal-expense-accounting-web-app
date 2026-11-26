@@ -4,7 +4,6 @@ import {
   DEFAULT_ACCOUNTS,
   DEFAULT_EXPENSE_CATEGORIES,
   DEFAULT_INCOME_CATEGORIES,
-  DEFAULT_PROJECTS,
   createDefaultProjectsForAccount,
   type Project,
   type Transaction,
