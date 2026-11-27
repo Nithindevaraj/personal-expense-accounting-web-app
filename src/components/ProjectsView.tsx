@@ -1197,7 +1197,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                     </label>
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold">
                       <Shield className="w-3 h-3" />
-                      Main Admin
+                      Owner
                     </span>
                   </div>
 
