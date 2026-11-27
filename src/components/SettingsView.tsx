@@ -161,7 +161,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const groupedRecurringByDivision = useMemo(() => {
     const divisionMap = new Map<string, Map<string, RecurringTransaction[]>>();
     for (const item of recurringTransactions) {
-      const projectName = item.tag || 'General Transactions';
+      const projectName = item.tag || 'Project';
       const matchingProj = projects.find((p) => !p.parentId && p.name === projectName);
       const divisionName = matchingProj?.division || 'General / Unassigned';
 
@@ -216,7 +216,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [recType, setRecType] = useState<TransactionType>('Expense');
   const [recDay, setRecDay] = useState('7');
   const [recAmount, setRecAmount] = useState('');
-  const [recTag, setRecTag] = useState(topProjects[0]?.name || 'General Transactions');
+  const [recTag, setRecTag] = useState(topProjects[0]?.name || '');
   const [recSubTag, setRecSubTag] = useState<string | null>(null);
   const [recCategory, setRecCategory] = useState(expenseCategories[0] || 'Rents');
   const [recDescription, setRecDescription] = useState('');
@@ -237,7 +237,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setRecType('Expense');
     setRecDay('7');
     setRecAmount('');
-    setRecTag(topProjects[0]?.name || 'General Transactions');
+    setRecTag(topProjects[0]?.name || '');
     setRecSubTag(null);
     setRecCategory(expenseCategories[0] || 'Rents');
     setRecDescription('');

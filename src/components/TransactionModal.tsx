@@ -40,7 +40,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [date, setDate] = useState<string>(getTodayString());
   const [amount, setAmount] = useState<string>('');
   const [category, setCategory] = useState<string>('');
-  const [tag, setTag] = useState<string>('General Transactions');
+  const [tag, setTag] = useState<string>('');
   const [subTag, setSubTag] = useState<string | null>(null);
   const [description, setDescription] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
@@ -72,8 +72,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         setType('Expense');
         setDate(getTodayString());
         setAmount('');
-        setCategory(expenseCategories[0] || 'Food');
-        setTag(firstParent?.name || 'General Transactions');
+        setCategory(expenseCategories[0] || 'Purchase');
+        setTag(firstParent?.name || '');
         setSubTag(null);
         setDescription('');
         setNotes('');

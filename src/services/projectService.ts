@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { isGeneralProject, type Project, type ProjectTeamAssignment } from '../types';
+import type { Project, ProjectTeamAssignment } from '../types';
 import { getStoredProjects, saveStoredProjects } from '../utils/storage';
 
 interface DbProjectRow {
@@ -81,11 +81,15 @@ export async function getProjectsFromSupabase(accountId: string = 'default'): Pr
   const rows = (data as DbProjectRow[]) || [];
   const mapped = rows
     .map((row) => mapRowToProject(row))
-    .sort((a, b) => {
-      if (isGeneralProject(a) && !isGeneralProject(b)) return -1;
-      if (!isGeneralProject(a) && isGeneralProject(b)) return 1;
-      return (a.createdAt || 0) - (b.createdAt || 0) || a.id.localeCompare(b.id);
-    });
+    .filter((p) => {
+      // Exclude legacy demo projects and general transactions
+      const id = p.id.toLowerCase();
+      const name = p.name.toLowerCase();
+      if (id === 'proj-general' || id.endsWith('-proj-general') || name === 'general transactions') return false;
+      if (id.includes('demo') || name.includes('demo project') || name.includes('demo job')) return false;
+      return true;
+    })
+    .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0) || a.id.localeCompare(b.id));
 
   saveStoredProjects(mapped, accountId);
   return mapped;
