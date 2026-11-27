@@ -114,8 +114,7 @@ export async function saveCategoriesToSupabase(updates: {
 }
 
 export async function getAccountsFromSupabase(): Promise<Account[]> {
-  const localAccounts = getStoredAccounts();
-  if (!isSupabaseConfigured) return localAccounts;
+  if (!isSupabaseConfigured) return getStoredAccounts();
 
   const { data, error } = await supabase
     .from('user_settings')
@@ -124,7 +123,7 @@ export async function getAccountsFromSupabase(): Promise<Account[]> {
 
   if (error) {
     console.error('Failed to fetch accounts from Supabase:', error.message);
-    return localAccounts;
+    return getStoredAccounts();
   }
 
   const cloudAccounts = Array.isArray((data as { accounts?: unknown } | null)?.accounts)
@@ -133,29 +132,9 @@ export async function getAccountsFromSupabase(): Promise<Account[]> {
       )
     : [];
 
-  if (cloudAccounts.length === 0) {
-    if (localAccounts.length > 0) {
-      await saveAccountsToSupabase(localAccounts);
-      return localAccounts;
-    }
-    saveStoredAccounts([]);
-    return [];
-  }
-
-  // Merge cloud accounts with any assigned accounts already stored locally to ensure zero loss of memberships
-  const mergedMap = new Map<string, Account>();
-  for (const acc of cloudAccounts) {
-    mergedMap.set(acc.id, acc);
-  }
-  for (const acc of localAccounts) {
-    if (!mergedMap.has(acc.id) && !(acc.id === 'default' && acc.name === 'Demo company')) {
-      mergedMap.set(acc.id, acc);
-    }
-  }
-  const finalAccounts = Array.from(mergedMap.values());
-
-  saveStoredAccounts(finalAccounts);
-  return finalAccounts;
+  // When connected to Supabase, cloud accounts is the authoritative single source of truth
+  saveStoredAccounts(cloudAccounts);
+  return cloudAccounts;
 }
 
 export async function saveAccountsToSupabase(accounts: Account[]): Promise<void> {
@@ -224,8 +203,7 @@ export async function saveRecurringToSupabase(items: RecurringTransaction[]): Pr
 }
 
 export async function getTeamMembersFromSupabase(): Promise<TeamMember[]> {
-  const localMembers = getStoredTeamMembers();
-  if (!isSupabaseConfigured) return localMembers;
+  if (!isSupabaseConfigured) return getStoredTeamMembers();
 
   const { data, error } = await supabase
     .from('user_settings')
@@ -234,7 +212,7 @@ export async function getTeamMembersFromSupabase(): Promise<TeamMember[]> {
 
   if (error) {
     console.error('Failed to fetch team members from Supabase:', error.message);
-    return localMembers;
+    return getStoredTeamMembers();
   }
 
   const cloudMembers = Array.isArray(
@@ -243,11 +221,7 @@ export async function getTeamMembersFromSupabase(): Promise<TeamMember[]> {
     ? ((data as { team_members: TeamMember[] }).team_members)
     : [];
 
-  if (cloudMembers.length === 0 && localMembers.length > 0) {
-    await saveTeamMembersToSupabase(localMembers);
-    return localMembers;
-  }
-
+  // Supabase is the single source of truth for team members
   saveStoredTeamMembers(cloudMembers);
   return cloudMembers;
 }

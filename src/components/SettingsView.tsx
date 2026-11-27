@@ -21,6 +21,7 @@ import {
   UserPlus,
   Building2,
   Edit2,
+  RefreshCw,
   X,
 } from 'lucide-react';
 import type {
@@ -72,6 +73,7 @@ interface SettingsViewProps {
   onAddTeamMember: (member: Omit<TeamMember, 'id' | 'accountId' | 'createdAt'>) => void;
   onEditTeamMember?: (member: TeamMember) => void;
   onDeleteTeamMember: (id: string) => void;
+  onRefreshTeamMembers?: () => void;
 }
 
 function formatDayOrdinal(day: number): string {
@@ -114,6 +116,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onAddTeamMember,
   onEditTeamMember,
   onDeleteTeamMember,
+  onRefreshTeamMembers,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
@@ -1104,9 +1107,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 Teams management
               </h2>
             </div>
-            <span className="text-[11px] font-semibold text-slate-500">
-              Members &amp; Access Roles
-            </span>
+            <div className="flex items-center gap-2">
+              {onRefreshTeamMembers && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onRefreshTeamMembers();
+                    showNotification('Syncing team members with cloud...');
+                  }}
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-600 hover:bg-slate-100 cursor-pointer"
+                  title="Refresh team members from cloud"
+                  aria-label="Refresh team members"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                </button>
+              )}
+              <span className="text-[11px] font-semibold text-slate-500">
+                Members &amp; Access Roles
+              </span>
+            </div>
           </div>
 
           {/* Add Team Member Form */}
@@ -1298,7 +1317,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <div className="flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-indigo-600 shrink-0" />
                 <h2 className="text-sm sm:text-base font-bold text-slate-900">
-                  Company
+                  Company management
                 </h2>
               </div>
               {openSections.company ? (
@@ -1346,7 +1365,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 {/* Teams Navigation Card */}
                 <button
                   type="button"
-                  onClick={() => setShowTeamsPage(true)}
+                  onClick={() => {
+                    if (onRefreshTeamMembers) onRefreshTeamMembers();
+                    setShowTeamsPage(true);
+                  }}
                   className="w-full bg-slate-50/70 hover:bg-slate-100/80 p-3.5 rounded-xl border border-slate-200/80 flex items-center justify-between gap-2 text-left transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-2">

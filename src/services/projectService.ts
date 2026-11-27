@@ -77,34 +77,14 @@ export async function getProjectsFromSupabase(accountId: string = 'default'): Pr
   }
 
   const rows = (data as DbProjectRow[]) || [];
-  if (rows.length === 0) {
-    const localProjects = getStoredProjects(accountId);
-    for (const proj of localProjects) {
-      await upsertProjectToSupabase(proj, accountId);
-    }
-    return localProjects;
-  }
-
-  const localById = new Map(getStoredProjects(accountId).map((p) => [p.id, p]));
   const mapped = rows
-    .map((row) => {
-      const proj = mapRowToProject(row);
-      const localProj = localById.get(proj.id);
-      if (localProj) {
-        if (!('division' in row)) {
-          proj.division = localProj.division ?? null;
-        }
-        if (!('team_members' in row)) {
-          proj.teamMembers = localProj.teamMembers;
-        }
-      }
-      return proj;
-    })
+    .map((row) => mapRowToProject(row))
     .sort((a, b) => {
       if (isGeneralProject(a) && !isGeneralProject(b)) return -1;
       if (!isGeneralProject(a) && isGeneralProject(b)) return 1;
       return (a.createdAt || 0) - (b.createdAt || 0) || a.id.localeCompare(b.id);
     });
+
   saveStoredProjects(mapped, accountId);
   return mapped;
 }

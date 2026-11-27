@@ -310,7 +310,18 @@ export const App: React.FC = () => {
     // Subscribe to Supabase Realtime changes for cross-device updates and company assignments
     let channel: ReturnType<typeof supabase.channel> | null = null;
     let assignmentChannel: ReturnType<typeof supabase.channel> | null = null;
+    let globalTeamChannel: ReturnType<typeof supabase.channel> | null = null;
     if (isSupabaseConfigured) {
+      // Global broadcast channel for instant multi-device team member synchronization
+      globalTeamChannel = supabase
+        .channel(`team-sync-${activeAccountId}`)
+        .on('broadcast', { event: 'team-updated' }, () => {
+          getTeamMembersFromSupabase().then((refreshed) => {
+            if (isMounted) setTeamMembers(refreshed);
+          }).catch(() => {});
+        })
+        .subscribe();
+
       assignmentChannel = supabase
         .channel(`company-assignments-${user.id}`)
         .on('broadcast', { event: 'company-added' }, (payload: { payload?: { company?: Account } }) => {
@@ -429,6 +440,9 @@ export const App: React.FC = () => {
       }
       if (assignmentChannel) {
         supabase.removeChannel(assignmentChannel);
+      }
+      if (globalTeamChannel) {
+        supabase.removeChannel(globalTeamChannel);
       }
     };
   }, [user, activeAccountId]);
@@ -870,6 +884,26 @@ export const App: React.FC = () => {
       return updated;
     });
 
+    // Broadcast team-updated event across all devices
+    if (isSupabaseConfigured && activeAccount) {
+      const syncChannel = supabase.channel(`team-sync-${activeAccountId}`);
+      syncChannel.subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          void syncChannel
+            .send({
+              type: 'broadcast',
+              event: 'team-updated',
+              payload: { accountId: activeAccountId },
+            })
+            .finally(() => {
+              setTimeout(() => {
+                supabase.removeChannel(syncChannel);
+              }, 1500);
+            });
+        }
+      });
+    }
+
     // Notify member via Realtime broadcast so this company is immediately added to their account list
     if (isSupabaseConfigured && activeAccount) {
       const targetUserId = member.userId;
@@ -904,6 +938,26 @@ export const App: React.FC = () => {
       void saveTeamMembersToSupabase(updated);
       return updated;
     });
+
+    // Broadcast update across devices
+    if (isSupabaseConfigured && activeAccount) {
+      const syncChannel = supabase.channel(`team-sync-${activeAccountId}`);
+      syncChannel.subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          void syncChannel
+            .send({
+              type: 'broadcast',
+              event: 'team-updated',
+              payload: { accountId: activeAccountId },
+            })
+            .finally(() => {
+              setTimeout(() => {
+                supabase.removeChannel(syncChannel);
+              }, 1500);
+            });
+        }
+      });
+    }
   };
 
   const handleDeleteTeamMember = (id: string) => {
@@ -913,6 +967,26 @@ export const App: React.FC = () => {
       void saveTeamMembersToSupabase(updated);
       return updated;
     });
+
+    // Broadcast update across devices
+    if (isSupabaseConfigured && activeAccount) {
+      const syncChannel = supabase.channel(`team-sync-${activeAccountId}`);
+      syncChannel.subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          void syncChannel
+            .send({
+              type: 'broadcast',
+              event: 'team-updated',
+              payload: { accountId: activeAccountId },
+            })
+            .finally(() => {
+              setTimeout(() => {
+                supabase.removeChannel(syncChannel);
+              }, 1500);
+            });
+        }
+      });
+    }
   };
 
   // Auto-generate due recurring transactions for the current month
@@ -1182,6 +1256,11 @@ export const App: React.FC = () => {
             onAddTeamMember={handleAddTeamMember}
             onEditTeamMember={handleEditTeamMember}
             onDeleteTeamMember={handleDeleteTeamMember}
+            onRefreshTeamMembers={() => {
+              getTeamMembersFromSupabase().then((refreshed) => {
+                setTeamMembers(refreshed);
+              }).catch(() => {});
+            }}
           />
         )}
       </main>
