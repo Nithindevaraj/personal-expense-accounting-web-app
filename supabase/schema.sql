@@ -200,7 +200,7 @@ CREATE TABLE IF NOT EXISTS public.projects (
     completed BOOLEAN NOT NULL DEFAULT false,
     completed_at TIMESTAMPTZ,
     division TEXT DEFAULT NULL,
-    creator_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    creator_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL DEFAULT auth.uid(),
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
@@ -227,7 +227,7 @@ CREATE TABLE IF NOT EXISTS public.expenses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id TEXT NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
     project_id TEXT REFERENCES public.projects(id) ON DELETE SET NULL,
-    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE DEFAULT auth.uid(),
     sl_no BIGINT,
     date DATE NOT NULL DEFAULT CURRENT_DATE,
     type TEXT NOT NULL DEFAULT 'Expense' CHECK (type IN ('Income', 'Expense')),

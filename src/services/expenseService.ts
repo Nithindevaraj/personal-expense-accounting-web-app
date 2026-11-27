@@ -155,7 +155,13 @@ export async function addExpense(
     return localTx;
   }
 
-  const payload = mapTransactionToPayload(txData, accountId);
+  const { data: authData } = await supabase.auth.getUser();
+  const currentAuthUid = authData?.user?.id;
+
+  const payload = {
+    ...mapTransactionToPayload(txData, accountId),
+    ...(currentAuthUid ? { user_id: currentAuthUid } : {}),
+  };
 
   let { data, error } = await supabase
     .from('expenses')

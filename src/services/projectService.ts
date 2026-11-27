@@ -101,15 +101,27 @@ export async function upsertProjectToSupabase(
 ): Promise<void> {
   if (!isSupabaseConfigured) return;
 
+  const { data: authData } = await supabase.auth.getUser();
+  const currentUid = authData?.user?.id;
+
+  const payloadWithCreator = {
+    ...mapProjectToPayload(project, accountId, true),
+    ...(currentUid ? { creator_id: currentUid } : {}),
+  };
+
   const { error } = await supabase
     .from('projects')
-    .upsert([mapProjectToPayload(project, accountId, true)], { onConflict: 'id' });
+    .upsert([payloadWithCreator], { onConflict: 'id' });
 
   if (error) {
-    if (error.message.includes('team_members') || error.message.includes('division')) {
+    if (error.message.includes('team_members') || error.message.includes('division') || error.message.includes('creator_id')) {
+      const fallbackPayload = {
+        ...mapProjectToPayload(project, accountId, false),
+        ...(currentUid ? { creator_id: currentUid } : {}),
+      };
       const { error: fallbackError } = await supabase
         .from('projects')
-        .upsert([mapProjectToPayload(project, accountId, false)], { onConflict: 'id' });
+        .upsert([fallbackPayload], { onConflict: 'id' });
       if (fallbackError) {
         console.error('Failed to upsert project in Supabase:', fallbackError.message);
       }
