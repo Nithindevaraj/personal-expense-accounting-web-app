@@ -37,19 +37,6 @@ export async function getCategoriesFromSupabase(): Promise<CloudCategories> {
     return { incomeCategories: localIncome, expenseCategories: localExpense };
   }
 
-  try {
-    if (localStorage.getItem('personal_accounting_cat_cloud_v3') !== '1') {
-      await saveCategoriesToSupabase({
-        incomeCategories: localIncome,
-        expenseCategories: localExpense,
-      });
-      localStorage.setItem('personal_accounting_cat_cloud_v3', '1');
-      return { incomeCategories: localIncome, expenseCategories: localExpense };
-    }
-  } catch {
-    // ignore storage errors
-  }
-
   const { data, error } = await supabase
     .from('user_settings')
     .select('user_id, income_categories, expense_categories')
@@ -134,6 +121,12 @@ export async function getAccountsFromSupabase(): Promise<Account[]> {
 
   if (ownError) {
     console.error('Failed to fetch accounts from Supabase:', ownError.message);
+    // CRITICAL FIX: If there is an error querying Supabase (network or RLS), NEVER overwrite with empty list!
+    // Return the preserved local accounts.
+    const localFallback = getStoredAccounts();
+    if (localFallback.length > 0) {
+      return localFallback;
+    }
   }
 
   const ownAccounts = Array.isArray((ownData as { accounts?: unknown } | null)?.accounts)
@@ -213,10 +206,25 @@ export async function getAccountsFromSupabase(): Promise<Account[]> {
     console.error('Error discovering company memberships from Supabase:', err);
   }
 
+  // Merge local accounts (guarantee no locally created companies are ever dropped)
+  const localAccounts = getStoredAccounts();
+  for (const loc of localAccounts) {
+    if (!verifiedMap.has(loc.id)) {
+      if (!loc.ownerId || loc.ownerId === user.id) {
+        verifiedMap.set(loc.id, loc);
+      }
+    }
+  }
+
   const finalAccounts = Array.from(verifiedMap.values());
 
-  saveStoredAccounts(finalAccounts);
-  void saveAccountsToSupabase(finalAccounts);
+  // Only persist back to Supabase if we have valid accounts or verified from ownAccounts
+  if (finalAccounts.length > 0) {
+    saveStoredAccounts(finalAccounts);
+    void saveAccountsToSupabase(finalAccounts);
+  } else if (localAccounts.length > 0) {
+    return localAccounts;
+  }
 
   return finalAccounts;
 }
@@ -235,6 +243,24 @@ export async function saveAccountsToSupabase(accounts: Account[]): Promise<void>
 
   if (error) {
     console.error('Failed to save accounts to Supabase:', error.message);
+  }
+
+  // Also sync to public.companies table if table exists
+  try {
+    for (const acc of accounts) {
+      if (acc.ownerId === user.id) {
+        await supabase.from('companies').upsert([
+          {
+            id: acc.id,
+            name: acc.name,
+            creator_id: user.id,
+            updated_at: new Date().toISOString(),
+          },
+        ], { onConflict: 'id' });
+      }
+    }
+  } catch {
+    // ignore if table not migrated yet
   }
 }
 

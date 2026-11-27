@@ -257,13 +257,8 @@ export const App: React.FC = () => {
             );
             if (valid.length === 0) {
               setOnboardingDone(false);
-              try {
-                localStorage.removeItem(`company_onboarding_done_${currentUserId}`);
-              } catch {}
             } else if (!valid.some((a) => a.id === activeAccountId)) {
-              // If active account is invalid, do NOT automatically jump in unless already onboarded
-              const storedDone = localStorage.getItem(`company_onboarding_done_${currentUserId}`) === 'true';
-              if (storedDone) {
+              if (onboardingDone) {
                 handleSwitchAccount(valid[0].id);
               }
             }
@@ -584,15 +579,7 @@ export const App: React.FC = () => {
   const currentUserId = user?.id || getOrCreateLocalUserId();
   const activeAccount = accounts.find((a) => a.id === activeAccountId) || accounts[0];
   const isCompanyAdmin = isUserCompanyAdmin(activeAccount, currentUserId, teamMembers);
-  const [onboardingDone, setOnboardingDone] = useState<boolean>(() => {
-    try {
-      const activeId = getActiveAccountId();
-      const storedDone = localStorage.getItem(`company_onboarding_done_${currentUserId}`) === 'true';
-      return storedDone && Boolean(activeId) && activeId !== DEFAULT_ACCOUNT_ID;
-    } catch {
-      return false;
-    }
-  });
+  const [onboardingDone, setOnboardingDone] = useState<boolean>(false);
 
   const handleDeleteTransaction = async (id: string) => {
     const target = transactions.find((t) => t.id === id);
@@ -811,7 +798,7 @@ export const App: React.FC = () => {
     setTxLedgerFilter({});
   };
 
-  const handleAddAccount = (name: string) => {
+  const handleAddAccount = async (name: string) => {
     const newAccountId = `acc-${Date.now()}`;
     const newAccount: Account = {
       id: newAccountId,
@@ -819,10 +806,9 @@ export const App: React.FC = () => {
       ownerId: currentUserId,
       createdAt: Date.now(),
     };
-    const nextAccounts = [...accounts, newAccount];
+    const nextAccounts = [...accounts.filter((a) => a.id !== newAccountId), newAccount];
     setAccounts(nextAccounts);
     saveStoredAccounts(nextAccounts);
-    void saveAccountsToSupabase(nextAccounts);
 
     // Register creator under Company Team
     const creatorName = user?.user_metadata?.full_name || userProfile.name || 'Admin';
@@ -838,7 +824,14 @@ export const App: React.FC = () => {
     const updatedTeamMembers = [...teamMembers, creatorMember];
     setTeamMembers(updatedTeamMembers);
     saveStoredTeamMembers(updatedTeamMembers);
-    void saveTeamMembersToSupabase(updatedTeamMembers);
+
+    // Synchronous await to guarantee Supabase persistence before any re-sync
+    try {
+      await saveAccountsToSupabase(nextAccounts);
+      await saveTeamMembersToSupabase(updatedTeamMembers, name);
+    } catch (err) {
+      console.error('Error persisting new account to cloud:', err);
+    }
 
     handleSwitchAccount(newAccount.id);
   };
@@ -930,11 +923,6 @@ export const App: React.FC = () => {
     }
 
     if (nextAccounts.length === 0) {
-      try {
-        localStorage.removeItem(`company_onboarding_done_${currentUserId}`);
-      } catch {
-        // ignore storage errors
-      }
       setOnboardingDone(false);
       setActiveAccountId(DEFAULT_ACCOUNT_ID);
       saveActiveAccountId(DEFAULT_ACCOUNT_ID);
@@ -1268,20 +1256,10 @@ export const App: React.FC = () => {
         teamMembers={teamMembers}
         currentUserId={currentUserId}
         onCreateCompany={(companyName) => {
-          try {
-            localStorage.setItem(`company_onboarding_done_${currentUserId}`, 'true');
-          } catch {
-            // ignore storage quota errors
-          }
           setOnboardingDone(true);
           handleAddAccount(companyName);
         }}
         onSelectCompany={(companyId) => {
-          try {
-            localStorage.setItem(`company_onboarding_done_${currentUserId}`, 'true');
-          } catch {
-            // ignore storage errors
-          }
           setOnboardingDone(true);
           handleSwitchAccount(companyId);
         }}

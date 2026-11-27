@@ -121,34 +121,12 @@ export async function getExpenses(accountId: string = 'default'): Promise<Transa
 
       if (error) {
         console.error('Failed to fetch expenses from Supabase:', error.message);
-        // Fallback to local storage on error
         return getStoredTransactions(accountId);
       }
 
       const transactions = (data as DbExpenseRow[]).map(mapRowToTransaction);
-
-      // Preserve any in-flight optimistic transactions not yet returned by Supabase
-      // Compound key deduplication prevents temporary transactions from duplicating
-      // when a concurrent real-time broadcast arrives before addExpense completes.
-      const localStored = getStoredTransactions(accountId);
-      const stillInFlight = localStored.filter((local) => {
-        if (!inFlightTempIds.has(local.id)) return false;
-        // Check if incoming server transactions already contain this transaction by compound key
-        const alreadyPresentOnServer = transactions.some(
-          (serverTx) =>
-            serverTx.date === local.date &&
-            serverTx.amount === local.amount &&
-            serverTx.type === local.type &&
-            serverTx.category === local.category &&
-            (local.slNo ? serverTx.slNo === local.slNo : true)
-        );
-        return !alreadyPresentOnServer;
-      });
-
-      const merged = [...stillInFlight, ...transactions];
-      // Cache to localStorage for offline fallback
-      saveStoredTransactions(merged, accountId);
-      return merged;
+      saveStoredTransactions(transactions, accountId);
+      return transactions;
     } finally {
       activeGetExpensesPromise = null;
     }
