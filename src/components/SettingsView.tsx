@@ -159,10 +159,27 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       return a.localeCompare(b);
     });
 
-    return divKeys.map((divisionName) => ({
-      divisionName,
-      projects: Array.from(divisionMap.get(divisionName)!.entries()),
-    }));
+    return divKeys.map((divisionName) => {
+      const projEntries = Array.from(divisionMap.get(divisionName)!.entries()).sort(
+        ([nameA], [nameB]) => {
+          if (nameA === 'General Transactions' && nameB !== 'General Transactions') return -1;
+          if (nameA !== 'General Transactions' && nameB === 'General Transactions') return 1;
+          const projA = projects.find((p) => !p.parentId && p.name === nameA);
+          const projB = projects.find((p) => !p.parentId && p.name === nameB);
+          return (projA?.createdAt || 0) - (projB?.createdAt || 0) || nameA.localeCompare(nameB);
+        }
+      );
+
+      return {
+        divisionName,
+        projects: projEntries.map(([projectName, items]) => [
+          projectName,
+          [...items].sort(
+            (a, b) => a.dayOfMonth - b.dayOfMonth || (a.createdAt || 0) - (b.createdAt || 0)
+          ),
+        ] as [string, RecurringTransaction[]]),
+      };
+    });
   }, [recurringTransactions, projects, activeAccount?.divisions]);
 
   const topProjects = projects.filter((p) => !p.parentId);
