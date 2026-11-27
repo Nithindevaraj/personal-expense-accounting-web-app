@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 );
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS user_code TEXT;
 
--- Pre-migration patch: Ensure company_id and other essential columns exist on any pre-existing tables
+-- Pre-migration patch: Ensure company_id, project_id, and other essential columns exist on any pre-existing tables
 ALTER TABLE IF EXISTS public.company_members ADD COLUMN IF NOT EXISTS company_id TEXT;
 ALTER TABLE IF EXISTS public.company_members ADD COLUMN IF NOT EXISTS user_id UUID;
 ALTER TABLE IF EXISTS public.company_members ADD COLUMN IF NOT EXISTS member_code TEXT;
@@ -79,12 +79,19 @@ ALTER TABLE IF EXISTS public.company_members ADD COLUMN IF NOT EXISTS designatio
 ALTER TABLE IF EXISTS public.company_members ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'spender';
 
 ALTER TABLE IF EXISTS public.projects ADD COLUMN IF NOT EXISTS company_id TEXT;
+ALTER TABLE IF EXISTS public.projects ADD COLUMN IF NOT EXISTS parent_id TEXT;
 ALTER TABLE IF EXISTS public.projects ADD COLUMN IF NOT EXISTS creator_id UUID;
+ALTER TABLE IF EXISTS public.projects ADD COLUMN IF NOT EXISTS division TEXT;
+ALTER TABLE IF EXISTS public.projects ADD COLUMN IF NOT EXISTS completed BOOLEAN DEFAULT false;
+ALTER TABLE IF EXISTS public.projects ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
 
 ALTER TABLE IF EXISTS public.expenses ADD COLUMN IF NOT EXISTS company_id TEXT;
+ALTER TABLE IF EXISTS public.expenses ADD COLUMN IF NOT EXISTS project_id TEXT;
 ALTER TABLE IF EXISTS public.expenses ADD COLUMN IF NOT EXISTS user_id UUID;
+ALTER TABLE IF EXISTS public.expenses ADD COLUMN IF NOT EXISTS sub_tag TEXT;
 
 ALTER TABLE IF EXISTS public.project_members ADD COLUMN IF NOT EXISTS company_id TEXT;
+ALTER TABLE IF EXISTS public.project_members ADD COLUMN IF NOT EXISTS project_id TEXT;
 ALTER TABLE IF EXISTS public.project_members ADD COLUMN IF NOT EXISTS user_id UUID;
 
 ALTER TABLE IF EXISTS public.company_divisions ADD COLUMN IF NOT EXISTS company_id TEXT;
