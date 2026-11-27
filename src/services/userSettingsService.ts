@@ -3,7 +3,6 @@ import {
   type Account,
   type RecurringTransaction,
   type TeamMember,
-  DEFAULT_ACCOUNTS,
 } from '../types';
 import {
   getStoredAccounts,
@@ -135,8 +134,12 @@ export async function getAccountsFromSupabase(): Promise<Account[]> {
     : [];
 
   if (cloudAccounts.length === 0) {
-    await saveAccountsToSupabase(localAccounts.length > 0 ? localAccounts : DEFAULT_ACCOUNTS);
-    return localAccounts;
+    if (localAccounts.length > 0) {
+      await saveAccountsToSupabase(localAccounts);
+      return localAccounts;
+    }
+    saveStoredAccounts([]);
+    return [];
   }
 
   saveStoredAccounts(cloudAccounts);

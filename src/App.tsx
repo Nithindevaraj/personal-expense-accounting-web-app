@@ -706,6 +706,12 @@ export const App: React.FC = () => {
         // ignore storage errors
       }
       setOnboardingDone(false);
+      setActiveAccountId(DEFAULT_ACCOUNT_ID);
+      saveActiveAccountId(DEFAULT_ACCOUNT_ID);
+      setTransactions([]);
+      setProjects([]);
+      setTxLedgerFilter({});
+      return;
     }
 
     if (activeAccountId === id) {
