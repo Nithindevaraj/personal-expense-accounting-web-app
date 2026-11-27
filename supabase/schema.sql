@@ -377,3 +377,25 @@ CREATE INDEX IF NOT EXISTS idx_expenses_proj ON public.expenses (project_id);
 -- ==============================================================================
 GRANT USAGE ON SCHEMA public TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
+
+-- ==============================================================================
+-- 14. STORAGE BUCKET FOR RECEIPTS
+-- ==============================================================================
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('receipts', 'receipts', true)
+ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS "Public can view receipt images" ON storage.objects;
+CREATE POLICY "Public can view receipt images" ON storage.objects
+    FOR SELECT USING (bucket_id = 'receipts');
+
+DROP POLICY IF EXISTS "Authenticated users can upload receipts" ON storage.objects;
+CREATE POLICY "Authenticated users can upload receipts" ON storage.objects
+    FOR INSERT TO authenticated
+    WITH CHECK (bucket_id = 'receipts');
+
+DROP POLICY IF EXISTS "Authenticated users can update their receipts" ON storage.objects;
+CREATE POLICY "Authenticated users can update their receipts" ON storage.objects
+    FOR UPDATE TO authenticated
+    USING (bucket_id = 'receipts');
+

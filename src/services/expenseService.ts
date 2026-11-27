@@ -8,6 +8,8 @@ import {
 export interface DbExpenseRow {
   id: string;
   user_id?: string;
+  company_id?: string;
+  account_id?: string;
   sl_no: number | null;
   date: string;
   type: 'Income' | 'Expense';
@@ -57,7 +59,7 @@ export function mapTransactionToPayload(
     description: tx.description || '',
     notes: tx.notes || '',
     attachments: tx.attachments || [],
-    account_id: accountId,
+    company_id: accountId,
   };
 }
 
@@ -114,7 +116,7 @@ export async function getExpenses(accountId: string = 'default'): Promise<Transa
       const { data, error } = await supabase
         .from('expenses')
         .select('*')
-        .eq('account_id', accountId)
+        .or(`company_id.eq.${accountId},account_id.eq.${accountId}`)
         .order('date', { ascending: false });
 
       if (error) {
@@ -124,10 +126,25 @@ export async function getExpenses(accountId: string = 'default'): Promise<Transa
       }
 
       const transactions = (data as DbExpenseRow[]).map(mapRowToTransaction);
+
       // Preserve any in-flight optimistic transactions not yet returned by Supabase
-      const stillInFlight = getStoredTransactions(accountId).filter((t) =>
-        inFlightTempIds.has(t.id)
-      );
+      // Compound key deduplication prevents temporary transactions from duplicating
+      // when a concurrent real-time broadcast arrives before addExpense completes.
+      const localStored = getStoredTransactions(accountId);
+      const stillInFlight = localStored.filter((local) => {
+        if (!inFlightTempIds.has(local.id)) return false;
+        // Check if incoming server transactions already contain this transaction by compound key
+        const alreadyPresentOnServer = transactions.some(
+          (serverTx) =>
+            serverTx.date === local.date &&
+            serverTx.amount === local.amount &&
+            serverTx.type === local.type &&
+            serverTx.category === local.category &&
+            (local.slNo ? serverTx.slNo === local.slNo : true)
+        );
+        return !alreadyPresentOnServer;
+      });
+
       const merged = [...stillInFlight, ...transactions];
       // Cache to localStorage for offline fallback
       saveStoredTransactions(merged, accountId);

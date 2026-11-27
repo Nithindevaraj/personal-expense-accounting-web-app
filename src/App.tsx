@@ -537,7 +537,18 @@ export const App: React.FC = () => {
       try {
         const savedTx = await addExpense(txData, activeAccountId);
         setTransactions((prev) => {
-          const withoutDup = prev.filter((t) => t.id !== savedTx.id);
+          // Compound check: remove duplicates by id OR matching in-flight compound signature
+          const withoutDup = prev.filter(
+            (t) =>
+              t.id !== savedTx.id &&
+              !(
+                t.id.startsWith('tx-temp-') &&
+                t.date === savedTx.date &&
+                t.amount === savedTx.amount &&
+                t.type === savedTx.type &&
+                t.slNo === savedTx.slNo
+              )
+          );
           const hasTemp = withoutDup.some((t) => t.id === tempId);
           const next = hasTemp
             ? withoutDup.map((t) => (t.id === tempId ? savedTx : t))
@@ -1102,6 +1113,11 @@ export const App: React.FC = () => {
   };
 
   // Auto-generate due recurring transactions for the current month
+  const handleSaveTransactionRef = useRef(handleSaveTransaction);
+  handleSaveTransactionRef.current = handleSaveTransaction;
+  const nextSlNoRef = useRef(nextSlNo);
+  nextSlNoRef.current = nextSlNo;
+
   useEffect(() => {
     if (isDataLoading || processingRecurringRef.current) return;
     if (recurringTransactions.length === 0) return;
@@ -1131,12 +1147,13 @@ export const App: React.FC = () => {
 
     (async () => {
       try {
+        const startSlNo = nextSlNoRef.current;
         for (let i = 0; i < dueRules.length; i++) {
           const rule = dueRules[i];
           const effectiveDay = Math.min(rule.dayOfMonth, daysInMonth);
           const dateStr = `${currentMonth}-${String(effectiveDay).padStart(2, '0')}`;
-          await handleSaveTransaction({
-            slNo: nextSlNo + i,
+          await handleSaveTransactionRef.current({
+            slNo: startSlNo + i,
             date: dateStr,
             type: rule.type,
             category: rule.category,
@@ -1207,7 +1224,12 @@ export const App: React.FC = () => {
   }
 
   // Post-login Company Onboarding: Create a Company (Admin) or Become a member of existing company
-  if (!isDataLoading && !onboardingDone && !accounts.some((a) => a.ownerId === currentUserId)) {
+  // Show gate if user hasn't completed onboarding or has no companies yet
+  const userValidCompanies = accounts.filter(
+    (a) => a.id !== DEFAULT_ACCOUNT_ID && !(a.id === 'default' && a.name === 'Demo company')
+  );
+
+  if (!isDataLoading && (!onboardingDone || userValidCompanies.length === 0)) {
     const individualUserCode = buildIndividualUserLink(
       currentUserId,
       user?.user_metadata?.full_name || userProfile.name
@@ -1217,6 +1239,9 @@ export const App: React.FC = () => {
       <CompanyOnboardingView
         userName={user?.user_metadata?.full_name || userProfile.name}
         userCode={individualUserCode}
+        availableCompanies={userValidCompanies}
+        teamMembers={teamMembers}
+        currentUserId={currentUserId}
         onCreateCompany={(companyName) => {
           try {
             localStorage.setItem(`company_onboarding_done_${currentUserId}`, 'true');
@@ -1226,6 +1251,15 @@ export const App: React.FC = () => {
           setOnboardingDone(true);
           handleAddAccount(companyName);
         }}
+        onSelectCompany={(companyId) => {
+          try {
+            localStorage.setItem(`company_onboarding_done_${currentUserId}`, 'true');
+          } catch {
+            // ignore storage errors
+          }
+          setOnboardingDone(true);
+          handleSwitchAccount(companyId);
+        }}
         onCheckMembership={async () => {
           const verified = await getAccountsFromSupabase();
           const validCompanies = verified.filter(
@@ -1233,12 +1267,6 @@ export const App: React.FC = () => {
           );
 
           if (validCompanies.length > 0) {
-            try {
-              localStorage.setItem(`company_onboarding_done_${currentUserId}`, 'true');
-            } catch {
-              // ignore storage errors
-            }
-            setOnboardingDone(true);
             setAccounts(validCompanies);
             if (!validCompanies.some((a) => a.id === activeAccountId)) {
               handleSwitchAccount(validCompanies[0].id);
@@ -1442,6 +1470,7 @@ export const App: React.FC = () => {
         incomeCategories={incomeCategories}
         expenseCategories={expenseCategories}
         nextSlNo={nextSlNo}
+        accountId={activeAccountId}
       />
 
       {/* Lightbox Attachment Viewer Modal */}

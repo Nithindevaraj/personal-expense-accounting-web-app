@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { X, Camera, Trash2, User, Check, Globe, ShieldCheck, LogOut, Link2, Copy } from 'lucide-react';
 import {
   type UserProfile,
@@ -51,16 +51,17 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     }
   };
 
-  useEffect(() => {
+  const [prevOpen, setPrevOpen] = useState(isOpen);
+  if (isOpen !== prevOpen) {
+    setPrevOpen(isOpen);
     if (isOpen) {
       const googleName = user?.user_metadata?.full_name;
       const googleAvatar = user?.user_metadata?.avatar_url;
-
       setName(googleName || userProfile.name);
       setCurrency(userProfile.currency || 'INR');
       setAvatar(googleAvatar || userProfile.avatar);
     }
-  }, [isOpen, userProfile, user]);
+  }
 
   if (!isOpen) return null;
 

@@ -17,12 +17,6 @@ export const AttachmentViewerModal: React.FC<AttachmentViewerModalProps> = ({
   const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
-    if (isOpen) {
-      setActiveIndex(0);
-    }
-  }, [isOpen, attachments]);
-
-  useEffect(() => {
     if (!isOpen || attachments.length <= 1) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') {

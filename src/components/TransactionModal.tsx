@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useId } from 'react';
+import React, { useState, useId } from 'react';
 import {
   X,
   Paperclip,
   ArrowDownRight,
   ArrowUpRight,
   FileText,
+  Loader2,
 } from 'lucide-react';
 import type { Project, Transaction, TransactionType } from '../types';
 import { formatINR, getTodayString } from '../utils/formatters';
+import { uploadReceiptAttachment } from '../services/attachmentService';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -18,6 +20,7 @@ interface TransactionModalProps {
   incomeCategories: string[];
   expenseCategories: string[];
   nextSlNo: number;
+  accountId?: string;
 }
 
 export const TransactionModal: React.FC<TransactionModalProps> = ({
@@ -29,6 +32,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   incomeCategories,
   expenseCategories,
   nextSlNo,
+  accountId = 'default',
 }) => {
   const fileInputId = useId();
 
@@ -41,37 +45,43 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [description, setDescription] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
   const [attachments, setAttachments] = useState<string[]>([]);
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState<boolean>(false);
   const [slNo, setSlNo] = useState<number>(nextSlNo);
 
   // Sync state ONLY when opening modal or switching edited transaction (never wipe form on background sync)
-  useEffect(() => {
-    if (!isOpen) return;
-    if (editingTransaction) {
-      setType(editingTransaction.type);
-      setDate(editingTransaction.date);
-      setAmount(String(editingTransaction.amount));
-      setCategory(editingTransaction.category);
-      setTag(editingTransaction.tag);
-      setSubTag(editingTransaction.subTag || null);
-      setDescription(editingTransaction.description || '');
-      setNotes(editingTransaction.notes || '');
-      setAttachments(editingTransaction.attachments || []);
-      setSlNo(editingTransaction.slNo);
-    } else {
-      const firstParent = projects.find((p) => !p.parentId) || projects[0];
-      setType('Expense');
-      setDate(getTodayString());
-      setAmount('');
-      setCategory(expenseCategories[0] || 'Food');
-      setTag(firstParent?.name || 'General Transactions');
-      setSubTag(null);
-      setDescription('');
-      setNotes('');
-      setAttachments([]);
-      setSlNo(nextSlNo);
+  const [prevOpen, setPrevOpen] = useState(isOpen);
+  const [prevEditingId, setPrevEditingId] = useState(editingTransaction?.id);
+
+  if (isOpen !== prevOpen || (isOpen && editingTransaction?.id !== prevEditingId)) {
+    setPrevOpen(isOpen);
+    setPrevEditingId(editingTransaction?.id);
+    if (isOpen) {
+      if (editingTransaction) {
+        setType(editingTransaction.type);
+        setDate(editingTransaction.date);
+        setAmount(String(editingTransaction.amount));
+        setCategory(editingTransaction.category);
+        setTag(editingTransaction.tag);
+        setSubTag(editingTransaction.subTag || null);
+        setDescription(editingTransaction.description || '');
+        setNotes(editingTransaction.notes || '');
+        setAttachments(editingTransaction.attachments || []);
+        setSlNo(editingTransaction.slNo);
+      } else {
+        const firstParent = projects.find((p) => !p.parentId) || projects[0];
+        setType('Expense');
+        setDate(getTodayString());
+        setAmount('');
+        setCategory(expenseCategories[0] || 'Food');
+        setTag(firstParent?.name || 'General Transactions');
+        setSubTag(null);
+        setDescription('');
+        setNotes('');
+        setAttachments([]);
+        setSlNo(nextSlNo);
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editingTransaction, isOpen]);
+  }
 
   // When type toggles, reset category to first in that list if not valid
   const handleTypeChange = (newType: TransactionType) => {
@@ -130,30 +140,33 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const uploaded: string[] = [];
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      try {
-        if (file.type.startsWith('image/')) {
-          const compressed = await compressImageFile(file);
-          if (compressed) uploaded.push(compressed);
-        } else {
-          if (file.size > 3 * 1024 * 1024) {
-            alert(`"${file.name}" is larger than 3 MB. Please choose a smaller PDF.`);
-            continue;
-          }
-          const dataUrl = await readFileAsDataURL(file);
-          if (dataUrl) uploaded.push(dataUrl);
+    // Strict 1-attachment rule: allow only one photo or one PDF per transaction
+    const file = files[0];
+    setIsUploadingAttachment(true);
+    try {
+      if (file.type.startsWith('image/')) {
+        const compressed = await compressImageFile(file);
+        if (compressed) {
+          // Convert dataUrl to blob for cloud upload
+          const res = await fetch(compressed);
+          const blob = await res.blob();
+          const uploadedUrl = await uploadReceiptAttachment(blob, file.name, accountId);
+          setAttachments([uploadedUrl]);
         }
-      } catch (err) {
-        console.error('Failed to read attachment:', err);
+      } else {
+        if (file.size > 3 * 1024 * 1024) {
+          alert(`"${file.name}" is larger than 3 MB. Please choose a smaller PDF.`);
+          return;
+        }
+        const uploadedUrl = await uploadReceiptAttachment(file, file.name, accountId);
+        setAttachments([uploadedUrl]);
       }
+    } catch (err) {
+      console.error('Failed to read or upload attachment:', err);
+    } finally {
+      setIsUploadingAttachment(false);
+      e.target.value = '';
     }
-
-    if (uploaded.length > 0) {
-      setAttachments((prev) => [...prev, ...uploaded]);
-    }
-    e.target.value = '';
   };
 
   const handleRemoveAttachment = (idx: number) => {
@@ -398,23 +411,33 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="block text-xs font-semibold text-slate-700">
-                Receipts & Attachments
+                Receipt / Bill (Max 1 file)
               </label>
-              <label
-                htmlFor={fileInputId}
-                className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer py-1"
-              >
-                <Paperclip className="w-3.5 h-3.5" />
-                <span>Upload Bill/Receipt</span>
-              </label>
-              <input
-                id={fileInputId}
-                type="file"
-                onChange={handleFileUpload}
-                accept="image/*,.pdf,application/pdf"
-                multiple
-                className="sr-only"
-              />
+              {isUploadingAttachment ? (
+                <span className="text-xs font-semibold text-indigo-600 flex items-center gap-1.5 py-1">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Uploading to Cloud...</span>
+                </span>
+              ) : attachments.length === 0 ? (
+                <>
+                  <label
+                    htmlFor={fileInputId}
+                    className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer py-1"
+                  >
+                    <Paperclip className="w-3.5 h-3.5" />
+                    <span>Upload Photo or PDF</span>
+                  </label>
+                  <input
+                    id={fileInputId}
+                    type="file"
+                    onChange={handleFileUpload}
+                    accept="image/*,.pdf,application/pdf"
+                    className="sr-only"
+                  />
+                </>
+              ) : (
+                <span className="text-[11px] font-medium text-slate-400">1 attachment added</span>
+              )}
             </div>
 
             {attachments.length > 0 && (

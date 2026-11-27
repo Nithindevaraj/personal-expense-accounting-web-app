@@ -5,6 +5,8 @@ import { getStoredProjects, saveStoredProjects } from '../utils/storage';
 interface DbProjectRow {
   id: string;
   user_id?: string;
+  company_id?: string;
+  account_id?: string;
   parent_id: string | null;
   name: string;
   description: string | null;
@@ -49,7 +51,7 @@ function mapProjectToPayload(
     completed: Boolean(project.completed),
     completed_at: project.completedAt ? new Date(project.completedAt).toISOString() : null,
     created_at: project.createdAt ? new Date(project.createdAt).toISOString() : new Date().toISOString(),
-    account_id: accountId,
+    company_id: accountId,
   };
 
   if (!includeExtendedFields) return base;
@@ -68,7 +70,7 @@ export async function getProjectsFromSupabase(accountId: string = 'default'): Pr
   const { data, error } = await supabase
     .from('projects')
     .select('*')
-    .eq('account_id', accountId)
+    .or(`company_id.eq.${accountId},account_id.eq.${accountId}`)
     .order('created_at', { ascending: true });
 
   if (error) {

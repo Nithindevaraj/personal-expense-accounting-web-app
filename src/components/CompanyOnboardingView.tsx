@@ -1,17 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import { Building2, ArrowRight, ShieldCheck, Users, Copy, Check, Loader2 } from 'lucide-react';
+import type { Account, TeamMember } from '../types';
 
 interface CompanyOnboardingViewProps {
   userName?: string;
   userCode: string;
+  availableCompanies?: Account[];
+  teamMembers?: TeamMember[];
+  currentUserId?: string;
   onCreateCompany: (companyName: string) => void;
+  onSelectCompany?: (companyId: string) => void;
   onCheckMembership: () => Promise<boolean>;
 }
 
 export const CompanyOnboardingView: React.FC<CompanyOnboardingViewProps> = ({
   userName,
   userCode,
+  availableCompanies = [],
+  teamMembers = [],
+  currentUserId,
   onCreateCompany,
+  onSelectCompany,
   onCheckMembership,
 }) => {
   const [companyName, setCompanyName] = useState('');
@@ -78,7 +87,7 @@ export const CompanyOnboardingView: React.FC<CompanyOnboardingViewProps> = ({
             {userName ? `Welcome, ${userName}` : 'Choose Workspace Mode'}
           </h1>
           <p className="text-xs text-slate-500">
-            Create your own company for full Admin access, or become a member of an existing company.
+            Create your own company for full Admin access, or access an existing company account.
           </p>
         </div>
 
@@ -119,13 +128,13 @@ export const CompanyOnboardingView: React.FC<CompanyOnboardingViewProps> = ({
           </span>
         </div>
 
-        {/* Option 2: Become a member of existing company */}
+        {/* Option 2: Available Companies & Waiting for Admin */}
         <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3.5">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-emerald-600 shrink-0" />
               <h2 className="text-sm font-bold text-slate-900">
-                Become a member of existing company
+                Available Companies for You
               </h2>
             </div>
             {isAutoChecking && (
@@ -136,9 +145,54 @@ export const CompanyOnboardingView: React.FC<CompanyOnboardingViewProps> = ({
             )}
           </div>
 
-          <p className="text-[11px] text-slate-600 leading-relaxed">
-            Share your <strong className="text-slate-800">16-Digit Individual User Code</strong> below with your company administrator. Once they enter this code in <strong className="text-slate-800">Teams management</strong>, you will automatically enter their company workspace.
-          </p>
+          {/* List of Available Companies (Both Created & Added by Admin) */}
+          {availableCompanies.length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-[11px] text-slate-600 font-medium">
+                Select a company account to enter:
+              </p>
+              <div className="space-y-1.5 max-h-48 overflow-y-auto pr-0.5">
+                {availableCompanies.map((comp) => {
+                  const isCreator = Boolean(currentUserId && comp.ownerId === currentUserId);
+                  const memberRole = teamMembers.find(
+                    (m) => m.accountId === comp.id && m.userId === currentUserId
+                  )?.role;
+                  const roleLabel = isCreator ? 'Owner' : memberRole === 'admin' ? 'Admin' : 'Spender';
+
+                  return (
+                    <button
+                      key={comp.id}
+                      type="button"
+                      onClick={() => onSelectCompany && onSelectCompany(comp.id)}
+                      className="w-full text-left p-2.5 rounded-xl border border-slate-200 bg-white hover:border-indigo-400 hover:bg-indigo-50/40 transition-all flex items-center justify-between group cursor-pointer shadow-xs"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
+                          <Building2 className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-slate-800 truncate group-hover:text-indigo-600 transition-colors">
+                            {comp.name}
+                          </p>
+                          <span className="inline-flex items-center text-[10px] font-semibold text-slate-500">
+                            {roleLabel}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 text-xs font-bold text-indigo-600 shrink-0">
+                        <span>Enter</span>
+                        <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <p className="text-[11px] text-slate-600 leading-relaxed">
+              Share your <strong className="text-slate-800">16-Digit Individual User Code</strong> below with your company administrator. Once they enter this code in <strong className="text-slate-800">Teams management</strong>, you will automatically enter their company workspace.
+            </p>
+          )}
 
           {/* Individual User Code Box */}
           <div className="space-y-1.5">
@@ -173,13 +227,15 @@ export const CompanyOnboardingView: React.FC<CompanyOnboardingViewProps> = ({
             </div>
           </div>
 
-          {/* Waiting Status Box */}
-          <div className="p-3 rounded-xl bg-emerald-50/80 border border-emerald-200/90 flex items-center gap-2.5 text-xs text-emerald-900">
-            <Loader2 className="w-4 h-4 animate-spin text-emerald-600 shrink-0" />
-            <p className="text-[11px] leading-relaxed">
-              Waiting for a company administrator to add your 16-digit code. This screen will automatically refresh into the workspace as soon as you are added.
-            </p>
-          </div>
+          {/* Waiting Status Box (if no available companies yet) */}
+          {availableCompanies.length === 0 && (
+            <div className="p-3 rounded-xl bg-emerald-50/80 border border-emerald-200/90 flex items-center gap-2.5 text-xs text-emerald-900">
+              <Loader2 className="w-4 h-4 animate-spin text-emerald-600 shrink-0" />
+              <p className="text-[11px] leading-relaxed">
+                Waiting for a company administrator to add your 16-digit code. This screen will automatically refresh into the workspace as soon as you are added.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

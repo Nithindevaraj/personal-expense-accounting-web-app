@@ -48,33 +48,32 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onEditTransaction,
 }) => {
   const [timeRange, setTimeRange] = useState<'all' | 'this_year' | 'this_month' | 'last_30_days'>('last_30_days');
+  const [currentDate] = useState(() => new Date());
 
   // Filtered transactions based on selected range
   const filteredTransactions = useMemo(() => {
     if (timeRange === 'all') return transactions;
 
-    const now = new Date();
     if (timeRange === 'this_year') {
-      const currentYear = String(now.getFullYear());
+      const currentYear = String(currentDate.getFullYear());
       return transactions.filter((t) => t.date.startsWith(currentYear));
     }
 
     if (timeRange === 'this_month') {
-      const currentYear = now.getFullYear();
-      const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+      const currentYear = currentDate.getFullYear();
+      const currentMonth = String(currentDate.getMonth() + 1).padStart(2, '0');
       const prefix = `${currentYear}-${currentMonth}`;
       return transactions.filter((t) => t.date.startsWith(prefix));
     }
 
     if (timeRange === 'last_30_days') {
-      const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() - 30);
+      const cutoff = new Date(currentDate.getTime() - 30 * 24 * 60 * 60 * 1000);
       const cutoffStr = cutoff.toISOString().split('T')[0];
       return transactions.filter((t) => t.date >= cutoffStr);
     }
 
     return transactions;
-  }, [transactions, timeRange]);
+  }, [transactions, timeRange, currentDate]);
 
   // Aggregate Key Metrics
   const metrics = useMemo(() => {
