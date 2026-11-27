@@ -81,7 +81,14 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   const [selectedMemberRole, setSelectedMemberRole] = useState<ProjectAccessRole>('spender');
 
   const topLevelProjects = useMemo(
-    () => projects.filter((p) => !p.parentId),
+    () =>
+      projects
+        .filter((p) => !p.parentId)
+        .sort((a, b) => {
+          if (isGeneralProject(a) && !isGeneralProject(b)) return -1;
+          if (!isGeneralProject(a) && isGeneralProject(b)) return 1;
+          return (a.createdAt || 0) - (b.createdAt || 0) || a.id.localeCompare(b.id);
+        }),
     [projects]
   );
 
@@ -132,7 +139,9 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     };
 
     const activeList = activeTopLevelProjects.map((p) => {
-      const children = projects.filter((sub) => sub.parentId === p.id && !sub.completed);
+      const children = projects
+        .filter((sub) => sub.parentId === p.id && !sub.completed)
+        .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0) || a.id.localeCompare(b.id));
       const calculatedSubs = children.map((sub) =>
         computeMetrics(sub, (t) => t.tag === p.name && t.subTag === sub.name)
       );

@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import type { Project, ProjectTeamAssignment } from '../types';
+import { isGeneralProject, type Project, type ProjectTeamAssignment } from '../types';
 import { getStoredProjects, saveStoredProjects } from '../utils/storage';
 
 interface DbProjectRow {
@@ -46,6 +46,7 @@ function mapProjectToPayload(
     color: project.color || '#3b82f6',
     completed: Boolean(project.completed),
     completed_at: project.completedAt ? new Date(project.completedAt).toISOString() : null,
+    created_at: project.createdAt ? new Date(project.createdAt).toISOString() : new Date().toISOString(),
     account_id: accountId,
   };
 
@@ -81,7 +82,13 @@ export async function getProjectsFromSupabase(accountId: string = 'default'): Pr
     return localProjects;
   }
 
-  const mapped = rows.map(mapRowToProject);
+  const mapped = rows
+    .map(mapRowToProject)
+    .sort((a, b) => {
+      if (isGeneralProject(a) && !isGeneralProject(b)) return -1;
+      if (!isGeneralProject(a) && isGeneralProject(b)) return 1;
+      return (a.createdAt || 0) - (b.createdAt || 0) || a.id.localeCompare(b.id);
+    });
   saveStoredProjects(mapped, accountId);
   return mapped;
 }
