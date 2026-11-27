@@ -895,103 +895,151 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium">
-              {calculatedProjects.map((p) => (
-                <React.Fragment key={p.id}>
-                  <tr className="hover:bg-slate-50/80 transition-colors">
-                    <td className="p-3">
-                      <div className="flex items-center gap-2.5">
-                        <span
-                          className="w-3 h-3 rounded-full shrink-0"
-                          style={{ backgroundColor: p.color || '#3b82f6' }}
-                        />
-                        <span className="font-bold text-slate-900">{p.name}</span>
-                      </div>
-                    </td>
-                    <td className="p-3 text-right text-emerald-700 font-bold">
-                      {formatINR(p.income)}
-                    </td>
-                    <td className="p-3 text-right text-rose-700 font-bold">
-                      {formatINR(p.expense)}
-                    </td>
-                    <td className="p-3 text-right">
-                      <span
-                        className={`inline-block px-2 py-0.5 rounded-md font-bold text-xs ${
-                          p.balance >= 0
-                            ? 'bg-emerald-50 text-emerald-700'
-                            : 'bg-rose-50 text-rose-700'
-                        }`}
-                      >
-                        {formatINR(p.balance)}
-                      </span>
-                    </td>
-                    <td className="p-3 text-center">
-                      <span
-                        className={`text-[11px] font-bold ${
-                          p.margin >= 0 ? 'text-emerald-600' : 'text-rose-600'
-                        }`}
-                      >
-                        {p.margin}%
-                      </span>
-                    </td>
-                    <td className="p-3 text-center">
-                      <button
-                        onClick={() => onViewProjectTransactions(p.name)}
-                        className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 cursor-pointer"
-                      >
-                        View Ledger
-                      </button>
-                    </td>
-                  </tr>
-                  {p.subProjects.map((sub) => (
-                    <tr key={sub.id} className="bg-slate-50/40 hover:bg-slate-50 transition-colors">
-                      <td className="p-3 pl-7">
-                        <div className="flex items-center gap-2">
-                          <CornerDownRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              {(() => {
+                const renderMatrixRows = (p: (typeof calculatedProjects)[number]) => (
+                  <React.Fragment key={p.id}>
+                    <tr className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3">
+                        <div className="flex items-center gap-2.5">
                           <span
-                            className="w-2.5 h-2.5 rounded-full shrink-0"
-                            style={{ backgroundColor: sub.color || p.color || '#3b82f6' }}
+                            className="w-3 h-3 rounded-full shrink-0"
+                            style={{ backgroundColor: p.color || '#3b82f6' }}
                           />
-                          <span className="font-semibold text-slate-700">{sub.name}</span>
+                          <span className="font-bold text-slate-900">{p.name}</span>
                         </div>
                       </td>
-                      <td className="p-3 text-right text-emerald-600 font-semibold">
-                        {formatINR(sub.income)}
+                      <td className="p-3 text-right text-emerald-700 font-bold">
+                        {formatINR(p.income)}
                       </td>
-                      <td className="p-3 text-right text-rose-600 font-semibold">
-                        {formatINR(sub.expense)}
+                      <td className="p-3 text-right text-rose-700 font-bold">
+                        {formatINR(p.expense)}
                       </td>
                       <td className="p-3 text-right">
                         <span
-                          className={`inline-block px-2 py-0.5 rounded-md font-semibold text-xs ${
-                            sub.balance >= 0
-                              ? 'bg-emerald-50/80 text-emerald-700'
-                              : 'bg-rose-50/80 text-rose-700'
+                          className={`inline-block px-2 py-0.5 rounded-md font-bold text-xs ${
+                            p.balance >= 0
+                              ? 'bg-emerald-50 text-emerald-700'
+                              : 'bg-rose-50 text-rose-700'
                           }`}
                         >
-                          {formatINR(sub.balance)}
+                          {formatINR(p.balance)}
                         </span>
                       </td>
                       <td className="p-3 text-center">
                         <span
-                          className={`text-[11px] font-semibold ${
-                            sub.margin >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                          className={`text-[11px] font-bold ${
+                            p.margin >= 0 ? 'text-emerald-600' : 'text-rose-600'
                           }`}
                         >
-                          {sub.margin}%
+                          {p.margin}%
                         </span>
                       </td>
                       <td className="p-3 text-center">
                         <button
-                          onClick={() => onViewProjectTransactions(p.name, sub.name)}
+                          onClick={() => onViewProjectTransactions(p.name)}
                           className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 cursor-pointer"
                         >
                           View Ledger
                         </button>
                       </td>
                     </tr>
-                  ))}
-                </React.Fragment>
-              ))}
+                    {p.subProjects.map((sub) => (
+                      <tr key={sub.id} className="bg-slate-50/40 hover:bg-slate-50 transition-colors">
+                        <td className="p-3 pl-7">
+                          <div className="flex items-center gap-2">
+                            <CornerDownRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span
+                              className="w-2.5 h-2.5 rounded-full shrink-0"
+                              style={{ backgroundColor: sub.color || p.color || '#3b82f6' }}
+                            />
+                            <span className="font-semibold text-slate-700">{sub.name}</span>
+                          </div>
+                        </td>
+                        <td className="p-3 text-right text-emerald-600 font-semibold">
+                          {formatINR(sub.income)}
+                        </td>
+                        <td className="p-3 text-right text-rose-600 font-semibold">
+                          {formatINR(sub.expense)}
+                        </td>
+                        <td className="p-3 text-right">
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded-md font-semibold text-xs ${
+                              sub.balance >= 0
+                                ? 'bg-emerald-50/80 text-emerald-700'
+                                : 'bg-rose-50/80 text-rose-700'
+                            }`}
+                          >
+                            {formatINR(sub.balance)}
+                          </span>
+                        </td>
+                        <td className="p-3 text-center">
+                          <span
+                            className={`text-[11px] font-semibold ${
+                              sub.margin >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                            }`}
+                          >
+                            {sub.margin}%
+                          </span>
+                        </td>
+                        <td className="p-3 text-center">
+                          <button
+                            onClick={() => onViewProjectTransactions(p.name, sub.name)}
+                            className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 cursor-pointer"
+                          >
+                            View Ledger
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
+                );
+
+                const hasDivisions =
+                  divisions.length > 0 || calculatedProjects.some((p) => Boolean(p.division));
+
+                if (!hasDivisions) {
+                  return calculatedProjects.map(renderMatrixRows);
+                }
+
+                const orderedDivisions = [...divisions];
+                for (const p of calculatedProjects) {
+                  if (p.division && !orderedDivisions.includes(p.division)) {
+                    orderedDivisions.push(p.division);
+                  }
+                }
+                const unassigned = calculatedProjects.filter((p) => !p.division);
+
+                return (
+                  <>
+                    {orderedDivisions.map((divName) => {
+                      const divProjects = calculatedProjects.filter(
+                        (p) => p.division === divName
+                      );
+                      if (divProjects.length === 0) return null;
+                      return (
+                        <React.Fragment key={`matrix-div-${divName}`}>
+                          <tr className="bg-indigo-50/50">
+                            <td colSpan={6} className="px-3 py-2 text-[11px] font-bold text-indigo-800">
+                              {divName}
+                            </td>
+                          </tr>
+                          {divProjects.map(renderMatrixRows)}
+                        </React.Fragment>
+                      );
+                    })}
+                    {unassigned.length > 0 && (
+                      <React.Fragment key="matrix-div-unassigned">
+                        <tr className="bg-slate-100/60">
+                          <td colSpan={6} className="px-3 py-2 text-[11px] font-bold text-slate-600">
+                            General / Unassigned
+                          </td>
+                        </tr>
+                        {unassigned.map(renderMatrixRows)}
+                      </React.Fragment>
+                    )}
+                  </>
+                );
+              })()}
             </tbody>
           </table>
         </div>

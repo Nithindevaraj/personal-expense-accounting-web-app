@@ -554,23 +554,33 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 No divisions added yet for this company.
               </p>
             ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {(activeAccount?.divisions || []).map((div) => (
-                  <span
-                    key={div}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-50 text-indigo-800 border border-indigo-200 text-xs font-semibold"
-                  >
-                    <span>{div}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveDivision(div)}
-                      className="p-0.5 hover:text-rose-600 cursor-pointer text-slate-400"
-                      aria-label={`Remove division ${div}`}
+              <div className="space-y-2">
+                {(activeAccount?.divisions || []).map((div) => {
+                  const divProjects = projects.filter((p) => !p.parentId && p.division === div);
+                  return (
+                    <div
+                      key={div}
+                      className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-white border border-slate-200"
                     >
-                      ×
-                    </button>
-                  </span>
-                ))}
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-slate-800 truncate">{div}</p>
+                        <p className="text-[11px] text-slate-500 truncate">
+                          {divProjects.length === 0
+                            ? 'No projects assigned'
+                            : `${divProjects.length} ${divProjects.length === 1 ? 'project' : 'projects'}: ${divProjects.map((p) => p.name).join(', ')}`}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveDivision(div)}
+                        className="p-1 rounded-lg hover:text-rose-600 hover:bg-rose-50 cursor-pointer text-slate-400 shrink-0"
+                        aria-label={`Remove division ${div}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
