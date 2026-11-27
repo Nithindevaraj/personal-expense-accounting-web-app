@@ -89,7 +89,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, [isAccountMenuOpen]);
 
   const activeAccount =
-    accounts.find((a) => a.id === activeAccountId) || accounts[0] || { id: DEFAULT_ACCOUNT_ID, name: 'Personal' };
+    accounts.find((a) => a.id === activeAccountId) || accounts[0] || { id: DEFAULT_ACCOUNT_ID, name: 'Demo company' };
 
   useEffect(() => {
     const mq = window.matchMedia?.('(prefers-color-scheme: dark)');

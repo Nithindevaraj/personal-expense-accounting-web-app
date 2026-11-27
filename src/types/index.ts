@@ -104,7 +104,7 @@ export interface TeamMember {
 
 export const DEFAULT_ACCOUNT_ID = 'default';
 export const DEFAULT_ACCOUNTS: Account[] = [
-  { id: DEFAULT_ACCOUNT_ID, name: 'Personal' },
+  { id: DEFAULT_ACCOUNT_ID, name: 'Demo company' },
 ];
 
 export const GENERAL_PROJECT_ID = 'proj-general';
