@@ -17,6 +17,7 @@ import {
 } from './types';
 import {
   type UserProfile,
+  buildIndividualUserLink,
   getActiveAccountId,
   getOrCreateLocalUserId,
   getStoredAccounts,
@@ -247,7 +248,36 @@ export const App: React.FC = () => {
             setExpenseCategories(fetchedCats.expenseCategories);
             setAccounts(fetchedAccounts);
             setRecurringTransactions(fetchedRecurring);
-            setTeamMembers(fetchedTeamMembers);
+
+            // Ensure company creator is registered in teams for all their owned companies
+            let mergedTeams = [...fetchedTeamMembers];
+            let teamsModified = false;
+            const creatorDisplayName = user.user_metadata?.full_name || userProfile.name || 'Admin';
+            fetchedAccounts.forEach((acc) => {
+              if (acc.ownerId === currentUserId) {
+                const exists = mergedTeams.some(
+                  (m) => m.accountId === acc.id && m.userId === currentUserId
+                );
+                if (!exists) {
+                  mergedTeams.push({
+                    id: `tm-owner-${acc.id}-${Date.now()}`,
+                    accountId: acc.id,
+                    userId: currentUserId,
+                    userLink: buildIndividualUserLink(currentUserId, creatorDisplayName),
+                    name: creatorDisplayName,
+                    designation: 'Admin / Owner',
+                    createdAt: Date.now(),
+                  });
+                  teamsModified = true;
+                }
+              }
+            });
+
+            setTeamMembers(mergedTeams);
+            if (teamsModified) {
+              saveStoredTeamMembers(mergedTeams);
+              void saveTeamMembersToSupabase(mergedTeams);
+            }
           }
         )
         .catch((err) => {
@@ -637,8 +667,9 @@ export const App: React.FC = () => {
   };
 
   const handleAddAccount = (name: string) => {
+    const newAccountId = `acc-${Date.now()}`;
     const newAccount: Account = {
-      id: `acc-${Date.now()}`,
+      id: newAccountId,
       name,
       ownerId: currentUserId,
       createdAt: Date.now(),
@@ -647,6 +678,23 @@ export const App: React.FC = () => {
     setAccounts(nextAccounts);
     saveStoredAccounts(nextAccounts);
     void saveAccountsToSupabase(nextAccounts);
+
+    // Register creator under Company Team
+    const creatorName = user?.user_metadata?.full_name || userProfile.name || 'Admin';
+    const creatorMember: TeamMember = {
+      id: `tm-${Date.now()}`,
+      accountId: newAccountId,
+      userId: currentUserId,
+      userLink: buildIndividualUserLink(currentUserId, creatorName),
+      name: creatorName,
+      designation: 'Admin / Owner',
+      createdAt: Date.now(),
+    };
+    const updatedTeamMembers = [...teamMembers, creatorMember];
+    setTeamMembers(updatedTeamMembers);
+    saveStoredTeamMembers(updatedTeamMembers);
+    void saveTeamMembersToSupabase(updatedTeamMembers);
+
     handleSwitchAccount(newAccount.id);
   };
 
