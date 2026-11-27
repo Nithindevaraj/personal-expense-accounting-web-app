@@ -18,6 +18,7 @@ import {
   FolderKanban,
   Users,
   UserPlus,
+  Building2,
 } from 'lucide-react';
 import type {
   Project,
@@ -107,6 +108,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [memberNameInput, setMemberNameInput] = useState('');
   const [memberDesignationInput, setMemberDesignationInput] = useState('');
   const [openSections, setOpenSections] = useState({
+    company: false,
     importExport: false,
     incomeCats: false,
     expenseCats: false,
@@ -728,35 +730,61 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       ) : (
         <>
-          {/* Recurring Transactions Navigation Card */}
-          <button
-            type="button"
-            onClick={() => setShowRecurringPage(true)}
-            className="w-full bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-2 text-left hover:bg-slate-50/70 transition-colors cursor-pointer"
-          >
-            <div className="flex items-center gap-2">
-              <Repeat className="w-5 h-5 text-indigo-600 shrink-0" />
-              <h2 className="text-sm sm:text-base font-bold text-slate-900">
-                Recurring Transactions
-              </h2>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-          </button>
+          {/* Company Card */}
+          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
+            <button
+              type="button"
+              onClick={() => toggleSection('company')}
+              aria-expanded={openSections.company}
+              className="w-full flex items-center justify-between gap-2 text-left cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-indigo-600 shrink-0" />
+                <h2 className="text-sm sm:text-base font-bold text-slate-900">
+                  Company
+                </h2>
+              </div>
+              {openSections.company ? (
+                <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+              )}
+            </button>
 
-          {/* Teams Navigation Card */}
-          <button
-            type="button"
-            onClick={() => setShowTeamsPage(true)}
-            className="w-full bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-2 text-left hover:bg-slate-50/70 transition-colors cursor-pointer"
-          >
-            <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-emerald-600 shrink-0" />
-              <h2 className="text-sm sm:text-base font-bold text-slate-900">
-                Teams
-              </h2>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-          </button>
+            {openSections.company && (
+              <div className="space-y-2.5 pt-4 mt-3 border-t border-slate-100">
+                {/* Recurring Transactions Navigation Card */}
+                <button
+                  type="button"
+                  onClick={() => setShowRecurringPage(true)}
+                  className="w-full bg-slate-50/70 hover:bg-slate-100/80 p-3.5 rounded-xl border border-slate-200/80 flex items-center justify-between gap-2 text-left transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Repeat className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span className="text-xs sm:text-sm font-bold text-slate-900">
+                      Recurring Transactions
+                    </span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                </button>
+
+                {/* Teams Navigation Card */}
+                <button
+                  type="button"
+                  onClick={() => setShowTeamsPage(true)}
+                  className="w-full bg-slate-50/70 hover:bg-slate-100/80 p-3.5 rounded-xl border border-slate-200/80 flex items-center justify-between gap-2 text-left transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="text-xs sm:text-sm font-bold text-slate-900">
+                      Teams
+                    </span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Import / Export Card */}
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
