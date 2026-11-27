@@ -665,6 +665,7 @@ export const App: React.FC = () => {
   };
 
   const handleClearAllData = async () => {
+    if (!activeAccount?.ownerId || activeAccount.ownerId !== currentUserId) return;
     const prevTxIds = transactions.map((t) => t.id);
     setTransactions([]);
     saveStoredTransactions([], activeAccountId);
@@ -922,6 +923,7 @@ export const App: React.FC = () => {
   }, [recurringTransactions, activeAccountId, isDataLoading]);
 
   const handleResetToDefaults = async () => {
+    if (!activeAccount?.ownerId || activeAccount.ownerId !== currentUserId) return;
     const prevProjectIds = projects.map((p) => p.id);
     const defaultProjects = createDefaultProjectsForAccount(activeAccountId);
 
@@ -1100,6 +1102,7 @@ export const App: React.FC = () => {
             userProfile={userProfile}
             activeAccount={activeAccount}
             isCompanyAdmin={isCompanyAdmin}
+            isCompanyCreator={Boolean(activeAccount?.ownerId && activeAccount.ownerId === currentUserId)}
             onUpdateAccount={handleUpdateAccount}
             onDeleteAccount={handleDeleteAccount}
             onUpdateIncomeCategories={(cats) => {

@@ -53,6 +53,7 @@ interface SettingsViewProps {
   userProfile: UserProfile;
   activeAccount?: Account;
   isCompanyAdmin?: boolean;
+  isCompanyCreator?: boolean;
   onUpdateAccount?: (account: Account) => void;
   onDeleteAccount?: (id: string) => void;
   onUpdateIncomeCategories: (cats: string[]) => void;
@@ -96,6 +97,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   userProfile,
   activeAccount,
   isCompanyAdmin = true,
+  isCompanyCreator = false,
   onUpdateAccount,
   onDeleteAccount,
   onUpdateIncomeCategories,
@@ -1596,7 +1598,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </div>
 
-      {/* Data Reset & Maintenance */}
+      {/* Data Reset & Maintenance (Restricted strictly to company creator) */}
+      {isCompanyCreator && (
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-rose-200 shadow-xs">
         <button
           type="button"
@@ -1665,6 +1668,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
         )}
       </div>
+      )}
         </>
       )}
     </div>
