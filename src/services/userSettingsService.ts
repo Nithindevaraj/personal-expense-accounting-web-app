@@ -112,101 +112,84 @@ export async function getAccountsFromSupabase(): Promise<Account[]> {
   const currentCode = buildIndividualUserCode(user.id);
   const strippedCurrentCode = currentCode.replace(/[^0-9]/g, '');
 
-  // 1. Fetch current user's own settings (contains companies they created/own)
-  const { data: ownData, error: ownError } = await supabase
-    .from('user_settings')
-    .select('accounts')
-    .eq('user_id', user.id)
-    .maybeSingle();
-
-  if (ownError) {
-    console.error('Failed to fetch accounts from Supabase:', ownError.message);
-    // CRITICAL FIX: If there is an error querying Supabase (network or RLS), NEVER overwrite with empty list!
-    // Return the preserved local accounts.
-    const localFallback = getStoredAccounts();
-    if (localFallback.length > 0) {
-      return localFallback;
-    }
-  }
-
-  const ownAccounts = Array.isArray((ownData as { accounts?: unknown } | null)?.accounts)
-    ? ((ownData as { accounts: Account[] }).accounts).filter(
-        (a) => !(a.id === 'default' && a.name === 'Demo company')
-      )
-    : [];
-
   const verifiedMap = new Map<string, Account>();
-  for (const acc of ownAccounts) {
-    if (!acc.ownerId || acc.ownerId === user.id) {
-      verifiedMap.set(acc.id, acc);
+
+  // 1. Fetch companies created by the user directly from public.companies
+  try {
+    const { data: createdCompanies, error: compErr } = await supabase
+      .from('companies')
+      .select('id, name, company_code, creator_id, created_at')
+      .eq('creator_id', user.id);
+
+    if (!compErr && Array.isArray(createdCompanies)) {
+      for (const comp of createdCompanies) {
+        verifiedMap.set(comp.id, {
+          id: comp.id,
+          name: comp.name,
+          companyCode: comp.company_code,
+          ownerId: comp.creator_id,
+          createdAt: comp.created_at ? new Date(comp.created_at).getTime() : Date.now(),
+        });
+      }
     }
+  } catch (err) {
+    console.error('Error fetching created companies from Supabase:', err);
   }
 
-  // 2. Discover company memberships from public.company_members registry
+  // 2. Discover participating company memberships from public.company_members
   try {
     const { data: memberRows, error: memberErr } = await supabase
       .from('company_members')
-      .select('*')
-      .or(`member_code.eq.${currentCode},member_code.eq.${strippedCurrentCode},member_code.eq.${user.id}`);
+      .select(`
+        company_id,
+        role,
+        companies:company_id (id, name, company_code, creator_id, created_at)
+      `)
+      .or(`user_id.eq.${user.id},member_code.eq.${currentCode},member_code.eq.${strippedCurrentCode}`);
 
     if (!memberErr && Array.isArray(memberRows) && memberRows.length > 0) {
       for (const row of memberRows) {
-        if (!verifiedMap.has(row.company_id)) {
-          verifiedMap.set(row.company_id, {
-            id: row.company_id,
-            name: row.company_name || 'Assigned Company',
-            ownerId: row.owner_id,
-            createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+        // Handle joined company row or flat company_id
+        const comp = row.companies as unknown as { id: string; name: string; company_code?: string; creator_id?: string; created_at?: string } | null;
+        if (comp && comp.id && !verifiedMap.has(comp.id)) {
+          verifiedMap.set(comp.id, {
+            id: comp.id,
+            name: comp.name,
+            companyCode: comp.company_code,
+            ownerId: comp.creator_id,
+            createdAt: comp.created_at ? new Date(comp.created_at).getTime() : Date.now(),
           });
         }
       }
     }
-  } catch {
-    // If company_members table not yet migrated, fall back below
+  } catch (err) {
+    console.error('Error querying company_members from Supabase:', err);
   }
 
-  // 3. Fallback: Discover all companies across user_settings rows
+  // 3. Fallback: Check user_settings table for legacy cached accounts
   try {
-    const { data: allSettings, error: allErr } = await supabase
+    const { data: ownData } = await supabase
       .from('user_settings')
-      .select('user_id, accounts, team_members');
+      .select('accounts')
+      .eq('user_id', user.id)
+      .maybeSingle();
 
-    if (!allErr && Array.isArray(allSettings)) {
-      for (const row of allSettings) {
-        if (row.user_id === user.id) continue;
+    const ownAccounts = Array.isArray((ownData as { accounts?: unknown } | null)?.accounts)
+      ? ((ownData as { accounts: Account[] }).accounts).filter(
+          (a) => !(a.id === 'default' && a.name === 'Demo company')
+        )
+      : [];
 
-        const ownerTeams = Array.isArray(row.team_members) ? (row.team_members as TeamMember[]) : [];
-        const ownerAccounts = Array.isArray(row.accounts) ? (row.accounts as Account[]) : [];
-
-        const memberships = ownerTeams.filter((m) => {
-          const mUserId = (m.userId || '').trim();
-          const mUserLink = (m.userLink || '').trim();
-          const strippedMUser = mUserId.replace(/[^0-9]/g, '');
-          const strippedMLink = mUserLink.replace(/[^0-9]/g, '');
-
-          return (
-            mUserId === user.id ||
-            mUserId === currentCode ||
-            (strippedMUser.length === 16 && strippedMUser === strippedCurrentCode) ||
-            mUserLink === currentCode ||
-            (strippedMLink.length === 16 && strippedMLink === strippedCurrentCode) ||
-            mUserLink.includes(user.id)
-          );
-        });
-
-        for (const membership of memberships) {
-          const matchingCompany = ownerAccounts.find((a) => a.id === membership.accountId);
-          if (matchingCompany && !verifiedMap.has(matchingCompany.id)) {
-            verifiedMap.set(matchingCompany.id, matchingCompany);
-          }
-        }
+    for (const acc of ownAccounts) {
+      if (!verifiedMap.has(acc.id) && (!acc.ownerId || acc.ownerId === user.id)) {
+        verifiedMap.set(acc.id, acc);
       }
     }
-  } catch (err) {
-    console.error('Error discovering company memberships from Supabase:', err);
+  } catch {
+    // ignore fallback error
   }
 
-  // Merge local accounts (guarantee no locally created companies are ever dropped)
+  // Merge local accounts (guarantee no locally created companies are dropped)
   const localAccounts = getStoredAccounts();
   for (const loc of localAccounts) {
     if (!verifiedMap.has(loc.id)) {
@@ -254,6 +237,7 @@ export async function saveAccountsToSupabase(accounts: Account[]): Promise<void>
             id: acc.id,
             name: acc.name,
             creator_id: user.id,
+            ...(acc.companyCode ? { company_code: acc.companyCode } : {}),
             updated_at: new Date().toISOString(),
           },
         ], { onConflict: 'id' });
@@ -336,7 +320,7 @@ export async function getTeamMembersFromSupabase(): Promise<TeamMember[]> {
   return cloudMembers;
 }
 
-export async function saveTeamMembersToSupabase(members: TeamMember[], companyName?: string): Promise<void> {
+export async function saveTeamMembersToSupabase(members: TeamMember[], _companyName?: string): Promise<void> {
   if (!isSupabaseConfigured) return;
 
   const {
@@ -357,24 +341,33 @@ export async function saveTeamMembersToSupabase(members: TeamMember[], companyNa
 
   // 2. Also register in public.company_members registry for cross-user discovery
   try {
-    // Delete existing entries for this user's companies in company_members
-    await supabase.from('company_members').delete().eq('owner_id', user.id);
-
     if (members.length > 0) {
-      const rows = members.map((m) => {
+      for (const m of members) {
         const cleanCode = (m.userLink || m.userId).replace(/[\s-]/g, '');
-        return {
-          company_id: m.accountId,
-          company_name: companyName || '',
-          owner_id: user.id,
-          member_code: (cleanCode.length === 16 ? m.userLink || m.userId : m.userId),
-          member_name: m.name || 'Team Member',
-          role: m.role || 'spender',
-        };
-      });
-      await supabase.from('company_members').insert(rows);
+        // Resolve profile id from user_code or member_code
+        const { data: matchedProfile } = await supabase
+          .from('profiles')
+          .select('id, name')
+          .or(`user_code.eq.${m.userLink},user_code.eq.${cleanCode},id.eq.${m.userId}`)
+          .maybeSingle();
+
+        const resolvedUserId = matchedProfile?.id || (m.userId.includes('-') && m.userId.length === 36 ? m.userId : null);
+
+        if (resolvedUserId) {
+          await supabase.from('company_members').upsert([
+            {
+              company_id: m.accountId,
+              user_id: resolvedUserId,
+              member_code: cleanCode.length === 16 ? m.userLink || m.userId : m.userId,
+              name: m.name || matchedProfile?.name || 'Team Member',
+              designation: m.designation || 'Member',
+              role: m.role || 'spender',
+            },
+          ], { onConflict: 'company_id,user_id' });
+        }
+      }
     }
-  } catch {
-    // Graceful fallback if company_members is pending SQL execution
+  } catch (err) {
+    console.error('Error syncing company_members to Supabase:', err);
   }
 }

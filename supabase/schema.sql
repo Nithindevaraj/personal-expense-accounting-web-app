@@ -2,19 +2,58 @@
 -- PERSONAL & ENTERPRISE ACCOUNTING - COMPLETE SUPABASE POSTGRESQL SCHEMA WITH RLS
 -- ==============================================================================
 -- Architecture:
--- 1. Users & Logins (Supabase Auth: auth.users, public.profiles)
--- 2. Companies (Multi-Tenant Company Root)
--- 3. Company Divisions (company_divisions)
--- 4. Projects (Parent Projects under Company/Division)
--- 5. Jobs / Sub-Projects (Child projects under Parent Projects)
--- 6. Team & Project Member Assignments with RBAC:
---    - Roles: 'creator', 'admin', 'spender'
---    - Company Creator & Admins manage members and assign them to any project
--- 7. Expenses / Transactions (Linked to Company, Project, Job, & User)
+-- 1. Extensions & Helpers
+-- 2. User Profiles (public.profiles with 16-digit user_code, auto-generated from auth.users)
+-- 3. Companies (public.companies with unique human-readable company_code)
+-- 4. Company Members (public.company_members linking profiles and companies with ON DELETE CASCADE)
+-- 5. Company Divisions (public.company_divisions - optional parent for projects)
+-- 6. Projects & Jobs (public.projects - standalone or under division, with child jobs)
+-- 7. Project Members (public.project_members with ON DELETE CASCADE)
+-- 8. Expenses / Transactions (public.expenses - standalone or tied to project/job)
+-- 9. User Settings (public.user_settings)
+-- 10. Login History (public.user_login_logs - records each login with name & code)
+-- 11. Row-Level Security (RLS) & Triggers
 -- ==============================================================================
 
 -- 1. EXTENSIONS
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- Helper function to generate clean 16-digit formatted code (e.g., 4829-1092-3849-2910)
+CREATE OR REPLACE FUNCTION public.generate_user_code(user_uuid UUID)
+RETURNS TEXT AS $$
+DECLARE
+    clean TEXT;
+    h1 BIGINT := 0;
+    h2 BIGINT := 0;
+    i INT;
+    c INT;
+    p1 TEXT;
+    p2 TEXT;
+    raw16 TEXT;
+BEGIN
+    clean := lower(replace(user_uuid::TEXT, '-', ''));
+    FOR i IN 1..length(clean) LOOP
+        c := ascii(substr(clean, i, 1));
+        h1 := (h1 * 31 + c) % 100000000;
+        h2 := (h2 * 37 + c) % 100000000;
+    END LOOP;
+    p1 := lpad(abs(h1)::TEXT, 8, '0');
+    p2 := lpad(abs(h2)::TEXT, 8, '0');
+    raw16 := substr(p1 || p2, 1, 16);
+    RETURN substr(raw16, 1, 4) || '-' || substr(raw16, 5, 4) || '-' || substr(raw16, 9, 4) || '-' || substr(raw16, 13, 4);
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+-- Helper function to generate random company code (e.g., CMP-7492-1830)
+CREATE OR REPLACE FUNCTION public.generate_company_code()
+RETURNS TEXT AS $$
+DECLARE
+    rand_digits TEXT;
+BEGIN
+    rand_digits := lpad((floor(random() * 90000000) + 10000000)::TEXT, 8, '0');
+    RETURN 'CMP-' || substr(rand_digits, 1, 4) || '-' || substr(rand_digits, 5, 4);
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 -- ==============================================================================
 -- 2. USER PROFILES (Synchronized with auth.users)
@@ -23,26 +62,52 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     email TEXT,
     name TEXT NOT NULL DEFAULT '',
+    user_code TEXT UNIQUE,
     avatar_url TEXT,
     currency TEXT NOT NULL DEFAULT 'INR',
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
--- Auto-create profile trigger on auth signup
+-- ==============================================================================
+-- 3. USER LOGIN AUDIT LOG (Records each login event with User Name & 16-digit code)
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.user_login_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    user_name TEXT NOT NULL DEFAULT '',
+    user_code TEXT NOT NULL DEFAULT '',
+    logged_in_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
+-- Auto-create/sync profile trigger on auth signup or login
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+    computed_name TEXT;
+    computed_code TEXT;
 BEGIN
-    INSERT INTO public.profiles (id, email, name, avatar_url)
+    computed_name := COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1));
+    computed_code := public.generate_user_code(NEW.id);
+
+    INSERT INTO public.profiles (id, email, name, user_code, avatar_url)
     VALUES (
         NEW.id,
         NEW.email,
-        COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)),
+        computed_name,
+        computed_code,
         NEW.raw_user_meta_data->>'avatar_url'
     )
     ON CONFLICT (id) DO UPDATE
     SET email = EXCLUDED.email,
-        name = CASE WHEN public.profiles.name = '' THEN EXCLUDED.name ELSE public.profiles.name END;
+        user_code = COALESCE(public.profiles.user_code, EXCLUDED.user_code),
+        name = CASE WHEN public.profiles.name = '' THEN EXCLUDED.name ELSE public.profiles.name END,
+        updated_at = timezone('utc'::text, now());
+
+    -- Record login event
+    INSERT INTO public.user_login_logs (user_id, user_name, user_code)
+    VALUES (NEW.id, computed_name, computed_code);
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -53,57 +118,49 @@ CREATE TRIGGER on_auth_user_created
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- ==============================================================================
--- 3. COMPANIES (Root Entity for Workspaces)
+-- 4. COMPANIES (Root Entity for Workspaces with Unique Company Code)
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.companies (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
-    creator_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    company_code TEXT UNIQUE NOT NULL DEFAULT public.generate_company_code(),
+    creator_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
 -- ==============================================================================
--- 4. COMPANY MEMBERS REGISTRY (For cross-user 16-digit code discovery and team management)
+-- 5. COMPANY MEMBERS (Junction linking profiles and companies with ON DELETE CASCADE)
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.company_members (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
-    company_id TEXT NOT NULL,
-    company_name TEXT NOT NULL DEFAULT '',
-    owner_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    company_id TEXT NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     member_code TEXT NOT NULL,
-    member_name TEXT NOT NULL DEFAULT 'Team Member',
+    name TEXT NOT NULL DEFAULT 'Team Member',
+    designation TEXT DEFAULT 'Member',
     role TEXT NOT NULL DEFAULT 'spender' CHECK (role IN ('creator', 'admin', 'spender')),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+    UNIQUE (company_id, user_id)
 );
 
-ALTER TABLE public.company_members ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Anyone authenticated can discover their company memberships" ON public.company_members;
-CREATE POLICY "Anyone authenticated can discover their company memberships" ON public.company_members
-    FOR SELECT TO authenticated USING (true);
-
-DROP POLICY IF EXISTS "Admins can manage their company members" ON public.company_members;
-CREATE POLICY "Admins can manage their company members" ON public.company_members
-    FOR ALL TO authenticated USING (auth.uid() = owner_id)
-    WITH CHECK (auth.uid() = owner_id);
-
-CREATE INDEX IF NOT EXISTS idx_comp_mem_code ON public.company_members (member_code);
-CREATE INDEX IF NOT EXISTS idx_comp_mem_company ON public.company_members (company_id);
-
--- Trigger: When a company is created, automatically register the creator as 'creator' member
+-- Trigger: When a company is created, register the creator as 'creator' member automatically
 CREATE OR REPLACE FUNCTION public.handle_new_company()
 RETURNS TRIGGER AS $$
 DECLARE
     creator_name TEXT;
+    creator_code TEXT;
 BEGIN
-    SELECT name INTO creator_name FROM public.profiles WHERE id = NEW.creator_id;
+    SELECT name, user_code INTO creator_name, creator_code FROM public.profiles WHERE id = NEW.creator_id;
     IF creator_name IS NULL OR creator_name = '' THEN
-        creator_name := 'Admin';
+        creator_name := 'Owner';
+    END IF;
+    IF creator_code IS NULL THEN
+        creator_code := public.generate_user_code(NEW.creator_id);
     END IF;
 
-    INSERT INTO public.company_members (company_id, user_id, name, designation, role)
-    VALUES (NEW.id, NEW.creator_id, creator_name, 'Owner / Creator', 'creator')
+    INSERT INTO public.company_members (company_id, user_id, member_code, name, designation, role)
+    VALUES (NEW.id, NEW.creator_id, creator_code, creator_name, 'Owner / Creator', 'creator')
     ON CONFLICT (company_id, user_id) DO UPDATE SET role = 'creator';
 
     RETURN NEW;
@@ -116,7 +173,7 @@ CREATE TRIGGER on_company_created
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_company();
 
 -- ==============================================================================
--- 5. COMPANY DIVISIONS (Departments / Divisions under a Company)
+-- 6. COMPANY DIVISIONS (Optional Departments under a Company)
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.company_divisions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -127,9 +184,10 @@ CREATE TABLE IF NOT EXISTS public.company_divisions (
 );
 
 -- ==============================================================================
--- 6. PROJECTS & JOBS (Parent Projects & Child Jobs)
--- - Projects: parent_id IS NULL (Optionally tied to division)
--- - Jobs: parent_id REFERENCES projects(id)
+-- 7. PROJECTS & JOBS (Parent Projects & Child Jobs)
+-- - Projects can be standalone (division IS NULL) or under a division
+-- - Parent projects: parent_id IS NULL
+-- - Child jobs: parent_id REFERENCES projects(id)
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.projects (
     id TEXT PRIMARY KEY,
@@ -142,33 +200,34 @@ CREATE TABLE IF NOT EXISTS public.projects (
     completed BOOLEAN NOT NULL DEFAULT false,
     completed_at TIMESTAMPTZ,
     division TEXT DEFAULT NULL,
-    creator_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    creator_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
 -- ==============================================================================
--- 7. PROJECT TEAM ASSIGNMENTS (Members assigned to specific projects)
--- Managed by Company Creator and Admins
+-- 8. PROJECT TEAM ASSIGNMENTS (Members assigned to specific projects)
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.project_members (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id TEXT NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
     company_id TEXT NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     role TEXT NOT NULL DEFAULT 'spender' CHECK (role IN ('admin', 'spender')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     UNIQUE (project_id, user_id)
 );
 
 -- ==============================================================================
--- 8. EXPENSES / TRANSACTIONS
+-- 9. EXPENSES / TRANSACTIONS
+-- - Directly supports standalone company expenses (project_id IS NULL)
+-- - Or tied to a Project / Job (project_id REFERENCES projects(id))
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.expenses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id TEXT NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
     project_id TEXT REFERENCES public.projects(id) ON DELETE SET NULL,
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     sl_no BIGINT,
     date DATE NOT NULL DEFAULT CURRENT_DATE,
     type TEXT NOT NULL DEFAULT 'Expense' CHECK (type IN ('Income', 'Expense')),
@@ -184,10 +243,10 @@ CREATE TABLE IF NOT EXISTS public.expenses (
 );
 
 -- ==============================================================================
--- 9. USER SETTINGS & RECURRING TRANSACTIONS (Config per user/company)
+-- 10. USER SETTINGS & PREFERENCES
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.user_settings (
-    user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    user_id UUID PRIMARY KEY REFERENCES public.profiles(id) ON DELETE CASCADE,
     name TEXT,
     currency TEXT DEFAULT 'INR',
     avatar_url TEXT,
@@ -200,10 +259,9 @@ CREATE TABLE IF NOT EXISTS public.user_settings (
 );
 
 -- ==============================================================================
--- 10. SECURITY HELPER FUNCTIONS (FOR SECURE & DETERMINISTIC RLS POLICIES)
+-- 11. SECURITY HELPER FUNCTIONS FOR RLS
 -- ==============================================================================
 
--- Check if user is an admin or creator in the company
 CREATE OR REPLACE FUNCTION public.is_company_admin(lookup_company_id TEXT, lookup_user_id UUID DEFAULT auth.uid())
 RETURNS BOOLEAN AS $$
 BEGIN
@@ -216,7 +274,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
 
--- Check if user belongs to the company in any role
 CREATE OR REPLACE FUNCTION public.is_company_member(lookup_company_id TEXT, lookup_user_id UUID DEFAULT auth.uid())
 RETURNS BOOLEAN AS $$
 BEGIN
@@ -228,7 +285,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
 
--- Check if user can modify a specific project
 CREATE OR REPLACE FUNCTION public.can_manage_project(lookup_project_id TEXT, lookup_user_id UUID DEFAULT auth.uid())
 RETURNS BOOLEAN AS $$
 DECLARE
@@ -239,12 +295,10 @@ BEGIN
         RETURN FALSE;
     END IF;
 
-    -- Company creators and admins can manage any project in their company
     IF public.is_company_admin(target_company_id, lookup_user_id) THEN
         RETURN TRUE;
     END IF;
 
-    -- Project admins can manage their specific project
     RETURN EXISTS (
         SELECT 1 FROM public.project_members
         WHERE project_id = lookup_project_id
@@ -255,10 +309,11 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
 
 -- ==============================================================================
--- 11. ROW LEVEL SECURITY (RLS) POLICIES
+-- 12. ROW LEVEL SECURITY (RLS) POLICIES
 -- ==============================================================================
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_login_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.companies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.company_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.company_divisions ENABLE ROW LEVEL SECURITY;
@@ -273,6 +328,13 @@ CREATE POLICY "Public profiles read" ON public.profiles FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile" ON public.profiles FOR ALL USING (auth.uid() = id);
+
+-- LOGIN LOGS
+DROP POLICY IF EXISTS "Users can view own login logs" ON public.user_login_logs;
+CREATE POLICY "Users can view own login logs" ON public.user_login_logs FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can insert own login logs" ON public.user_login_logs;
+CREATE POLICY "Users can insert own login logs" ON public.user_login_logs FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- COMPANIES
 DROP POLICY IF EXISTS "Members can view their companies" ON public.companies;
@@ -362,24 +424,25 @@ CREATE POLICY "Users can view and edit own settings" ON public.user_settings
     WITH CHECK (auth.uid() = user_id);
 
 -- ==============================================================================
--- 12. INDEXES FOR HIGH-SPEED QUERIES
+-- 13. INDEXES FOR PERFORMANCE
 -- ==============================================================================
+CREATE INDEX IF NOT EXISTS idx_profiles_user_code ON public.profiles (user_code);
+CREATE INDEX IF NOT EXISTS idx_companies_company_code ON public.companies (company_code);
 CREATE INDEX IF NOT EXISTS idx_comp_mem_comp_user ON public.company_members (company_id, user_id);
-CREATE INDEX IF NOT EXISTS idx_comp_mem_user ON public.company_members (user_id);
+CREATE INDEX IF NOT EXISTS idx_comp_mem_code ON public.company_members (member_code);
 CREATE INDEX IF NOT EXISTS idx_proj_comp ON public.projects (company_id);
 CREATE INDEX IF NOT EXISTS idx_proj_parent ON public.projects (parent_id);
-CREATE INDEX IF NOT EXISTS idx_proj_mem_proj_user ON public.project_members (project_id, user_id);
 CREATE INDEX IF NOT EXISTS idx_expenses_comp_date ON public.expenses (company_id, date DESC);
 CREATE INDEX IF NOT EXISTS idx_expenses_proj ON public.expenses (project_id);
 
 -- ==============================================================================
--- 13. GRANTS
+-- 14. GRANTS
 -- ==============================================================================
 GRANT USAGE ON SCHEMA public TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
 
 -- ==============================================================================
--- 14. STORAGE BUCKET FOR RECEIPTS
+-- 15. STORAGE BUCKET FOR RECEIPTS
 -- ==============================================================================
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('receipts', 'receipts', true)
@@ -398,4 +461,3 @@ DROP POLICY IF EXISTS "Authenticated users can update their receipts" ON storage
 CREATE POLICY "Authenticated users can update their receipts" ON storage.objects
     FOR UPDATE TO authenticated
     USING (bucket_id = 'receipts');
-

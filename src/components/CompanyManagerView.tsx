@@ -254,6 +254,11 @@ export const CompanyManagerView: React.FC<CompanyManagerViewProps> = ({
                       </div>
                       <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
                         <span className="font-semibold text-indigo-600">{roleLabel}</span>
+                        {comp.companyCode && (
+                          <span className="font-mono bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                            {comp.companyCode}
+                          </span>
+                        )}
                         {comp.taxId && <span>• Tax ID: {comp.taxId}</span>}
                       </div>
                     </div>

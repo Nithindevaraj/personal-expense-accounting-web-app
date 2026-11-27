@@ -70,6 +70,7 @@ export const DEFAULT_EXPENSE_CATEGORIES: string[] = [
 export interface Account {
   id: string;
   name: string;
+  companyCode?: string;
   ownerId?: string;
   email?: string;
   phone?: string;
