@@ -1,20 +1,22 @@
-import React, { useState } from 'react';
-import { Building2, ArrowRight, ShieldCheck, Users, AlertCircle, Loader2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Building2, ArrowRight, ShieldCheck, Users, Copy, Check, Loader2 } from 'lucide-react';
 
 interface CompanyOnboardingViewProps {
   userName?: string;
+  userLink: string;
   onCreateCompany: (companyName: string) => void;
-  onJoinAsMember: () => Promise<boolean> | boolean;
+  onCheckMembership: () => Promise<boolean>;
 }
 
 export const CompanyOnboardingView: React.FC<CompanyOnboardingViewProps> = ({
   userName,
+  userLink,
   onCreateCompany,
-  onJoinAsMember,
+  onCheckMembership,
 }) => {
   const [companyName, setCompanyName] = useState('');
-  const [isCheckingMember, setIsCheckingMember] = useState(false);
-  const [membershipError, setMembershipError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [isAutoChecking, setIsAutoChecking] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,22 +25,47 @@ export const CompanyOnboardingView: React.FC<CompanyOnboardingViewProps> = ({
     onCreateCompany(trimmed);
   };
 
-  const handleMemberClick = async () => {
-    setMembershipError(null);
-    setIsCheckingMember(true);
+  const handleCopyLink = async () => {
     try {
-      const hasMembership = await Promise.resolve(onJoinAsMember());
-      if (!hasMembership) {
-        setMembershipError(
-          'You are not a part of any existing company yet. Please ask your company administrator to add your user link in Teams management, or create your own company above.'
-        );
-      }
+      await navigator.clipboard.writeText(userLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
     } catch {
-      setMembershipError('Failed to verify company membership. Please try again.');
-    } finally {
-      setIsCheckingMember(false);
+      // Fallback manual copy
+      const input = document.createElement('textarea');
+      input.value = userLink;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
     }
   };
+
+  // Periodically check in the background while waiting for admin to add user
+  useEffect(() => {
+    let isCancelled = false;
+    const interval = setInterval(async () => {
+      if (isCancelled) return;
+      setIsAutoChecking(true);
+      try {
+        const found = await onCheckMembership();
+        if (found && !isCancelled) {
+          clearInterval(interval);
+        }
+      } catch {
+        // ignore background poll errors
+      } finally {
+        if (!isCancelled) setIsAutoChecking(false);
+      }
+    }, 4000);
+
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+    };
+  }, [onCheckMembership]);
 
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
@@ -51,7 +78,7 @@ export const CompanyOnboardingView: React.FC<CompanyOnboardingViewProps> = ({
             {userName ? `Welcome, ${userName}` : 'Choose Workspace Mode'}
           </h1>
           <p className="text-xs text-slate-500">
-            Create your own company for full Admin access, or continue as a member of an existing company.
+            Create your own company for full Admin access, or become a member of an existing company.
           </p>
         </div>
 
@@ -71,10 +98,7 @@ export const CompanyOnboardingView: React.FC<CompanyOnboardingViewProps> = ({
             type="text"
             required
             value={companyName}
-            onChange={(e) => {
-              setCompanyName(e.target.value);
-              if (membershipError) setMembershipError(null);
-            }}
+            onChange={(e) => setCompanyName(e.target.value)}
             placeholder="Enter company name..."
             className="w-full px-3 py-2.5 text-base sm:text-xs bg-white border border-indigo-200 rounded-xl font-medium text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20"
           />
@@ -95,47 +119,67 @@ export const CompanyOnboardingView: React.FC<CompanyOnboardingViewProps> = ({
           </span>
         </div>
 
-        {/* Option 2: Member of existing company */}
-        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-          <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-emerald-600 shrink-0" />
-            <h2 className="text-sm font-bold text-slate-900">Member of existing company</h2>
+        {/* Option 2: Become a member of existing company */}
+        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-emerald-600 shrink-0" />
+              <h2 className="text-sm font-bold text-slate-900">
+                Become a member of existing company
+              </h2>
+            </div>
+            {isAutoChecking && (
+              <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-700 animate-pulse">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                <span>Syncing</span>
+              </span>
+            )}
           </div>
-          <p className="text-[11px] text-slate-500 leading-relaxed">
-            Continue as a member. If an administrator has assigned you to their company, your assigned companies and projects will automatically sync.
+
+          <p className="text-[11px] text-slate-600 leading-relaxed">
+            Share your <strong className="text-slate-800">Individual User Link</strong> below with your company administrator. Once they paste this link in <strong className="text-slate-800">Teams management</strong>, you will automatically enter their company workspace.
           </p>
 
-          {/* Membership Error / Warning Alert */}
-          {membershipError && (
-            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200/90 text-rose-800 text-xs flex items-start gap-2.5 animate-shake">
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p className="font-bold">Not a part of any existing company</p>
-                <p className="text-[11px] text-rose-700 leading-relaxed font-normal">
-                  {membershipError}
-                </p>
-              </div>
+          {/* Individual User Link Box */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-700 block">
+              Your Individual User Link
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                readOnly
+                value={userLink}
+                className="w-full px-2.5 py-2 text-xs font-mono bg-white border border-slate-300 rounded-xl text-slate-600 focus:outline-hidden select-all"
+              />
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shrink-0 transition-colors cursor-pointer"
+                title="Copy Individual User Link"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Copy Link</span>
+                  </>
+                )}
+              </button>
             </div>
-          )}
+          </div>
 
-          <button
-            type="button"
-            onClick={handleMemberClick}
-            disabled={isCheckingMember}
-            className="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-slate-100 disabled:opacity-60 text-slate-800 border border-slate-300 text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-          >
-            {isCheckingMember ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-600" />
-                <span>Checking company membership...</span>
-              </>
-            ) : (
-              <>
-                <span>Continue as Member</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </>
-            )}
-          </button>
+          {/* Waiting Status Box */}
+          <div className="p-3 rounded-xl bg-emerald-50/80 border border-emerald-200/90 flex items-center gap-2.5 text-xs text-emerald-900">
+            <Loader2 className="w-4 h-4 animate-spin text-emerald-600 shrink-0" />
+            <p className="text-[11px] leading-relaxed">
+              Waiting for a company administrator to add your link. This screen will automatically refresh into the workspace as soon as you are added.
+            </p>
+          </div>
         </div>
       </div>
     </div>

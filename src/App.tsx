@@ -1176,11 +1176,17 @@ export const App: React.FC = () => {
     return <LoginView />;
   }
 
-  // Post-login Company Onboarding: Create a Company (Admin) or Member of existing company
+  // Post-login Company Onboarding: Create a Company (Admin) or Become a member of existing company
   if (!isDataLoading && !onboardingDone && !accounts.some((a) => a.ownerId === currentUserId)) {
+    const individualUserLink = buildIndividualUserLink(
+      currentUserId,
+      user?.user_metadata?.full_name || userProfile.name
+    );
+
     return (
       <CompanyOnboardingView
         userName={user?.user_metadata?.full_name || userProfile.name}
+        userLink={individualUserLink}
         onCreateCompany={(companyName) => {
           try {
             localStorage.setItem(`company_onboarding_done_${currentUserId}`, 'true');
@@ -1190,30 +1196,26 @@ export const App: React.FC = () => {
           setOnboardingDone(true);
           handleAddAccount(companyName);
         }}
-        onJoinAsMember={async () => {
-          // Actively fetch and verify accounts against Supabase
+        onCheckMembership={async () => {
           const verified = await getAccountsFromSupabase();
-          // User is a valid member if they have at least 1 verified company (owned or member-assigned)
           const validCompanies = verified.filter(
             (a) => a.id !== DEFAULT_ACCOUNT_ID && !(a.id === 'default' && a.name === 'Demo company')
           );
 
-          if (validCompanies.length === 0) {
-            // Not a part of any existing company!
-            return false;
+          if (validCompanies.length > 0) {
+            try {
+              localStorage.setItem(`company_onboarding_done_${currentUserId}`, 'true');
+            } catch {
+              // ignore storage errors
+            }
+            setOnboardingDone(true);
+            setAccounts(validCompanies);
+            if (!validCompanies.some((a) => a.id === activeAccountId)) {
+              handleSwitchAccount(validCompanies[0].id);
+            }
+            return true;
           }
-
-          try {
-            localStorage.setItem(`company_onboarding_done_${currentUserId}`, 'true');
-          } catch {
-            // ignore storage quota errors
-          }
-          setOnboardingDone(true);
-          setAccounts(validCompanies);
-          if (!validCompanies.some((a) => a.id === activeAccountId)) {
-            handleSwitchAccount(validCompanies[0].id);
-          }
-          return true;
+          return false;
         }}
       />
     );
