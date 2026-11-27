@@ -3,7 +3,6 @@ import {
   type RecurringTransaction,
   type TeamMember,
   DEFAULT_ACCOUNT_ID,
-  DEFAULT_ACCOUNTS,
   DEFAULT_EXPENSE_CATEGORIES,
   DEFAULT_INCOME_CATEGORIES,
   createDefaultProjectsForAccount,
@@ -143,16 +142,15 @@ export function getStoredAccounts(): Account[] {
   try {
     const data = localStorage.getItem(STORAGE_KEYS.ACCOUNTS);
     if (!data) {
-      saveStoredAccounts(DEFAULT_ACCOUNTS);
-      return DEFAULT_ACCOUNTS;
+      return [];
     }
     const parsed = JSON.parse(data);
-    if (!Array.isArray(parsed)) return DEFAULT_ACCOUNTS;
+    if (!Array.isArray(parsed)) return [];
     return parsed.filter(
-      (a: Account) => !(a.id === DEFAULT_ACCOUNT_ID && a.name === 'Demo company')
+      (a: Account) => a && a.id && a.id !== DEFAULT_ACCOUNT_ID && !(a.id === 'default' && a.name === 'Demo company')
     );
   } catch {
-    return DEFAULT_ACCOUNTS;
+    return [];
   }
 }
 
@@ -166,9 +164,10 @@ export function saveStoredAccounts(accounts: Account[]): void {
 
 export function getActiveAccountId(): string {
   try {
-    return localStorage.getItem(STORAGE_KEYS.ACTIVE_ACCOUNT_ID) || DEFAULT_ACCOUNT_ID;
+    const stored = localStorage.getItem(STORAGE_KEYS.ACTIVE_ACCOUNT_ID);
+    return stored && stored !== DEFAULT_ACCOUNT_ID ? stored : '';
   } catch {
-    return DEFAULT_ACCOUNT_ID;
+    return '';
   }
 }
 

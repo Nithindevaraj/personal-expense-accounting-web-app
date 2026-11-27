@@ -20,7 +20,6 @@ import {
   Trash2,
 } from 'lucide-react';
 import type { Account, TeamMember } from '../types';
-import { DEFAULT_ACCOUNT_ID } from '../types';
 import { formatINR } from '../utils/formatters';
 import type { UserProfile } from '../utils/storage';
 import { useAuth } from '../context/AuthContext';
@@ -97,7 +96,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, [isAccountMenuOpen]);
 
   const activeAccount =
-    accounts.find((a) => a.id === activeAccountId) || accounts[0] || { id: DEFAULT_ACCOUNT_ID, name: 'Personal' };
+    accounts.find((a) => a.id === activeAccountId) || accounts[0] || { id: '', name: 'No Company Selected' };
 
   useEffect(() => {
     const mq = window.matchMedia?.('(prefers-color-scheme: dark)');

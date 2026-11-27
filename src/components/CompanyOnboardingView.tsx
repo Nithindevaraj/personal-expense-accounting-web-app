@@ -52,17 +52,18 @@ export const CompanyOnboardingView: React.FC<CompanyOnboardingViewProps> = ({
     }
   };
 
-  // Periodically check in the background while waiting for admin to add user
+  // Check immediately upon mount, then periodically in the background
   useEffect(() => {
     let isCancelled = false;
+
+    // Immediate check on initial load / refresh
+    void onCheckMembership();
+
     const interval = setInterval(async () => {
       if (isCancelled) return;
       setIsAutoChecking(true);
       try {
-        const found = await onCheckMembership();
-        if (found && !isCancelled) {
-          clearInterval(interval);
-        }
+        await onCheckMembership();
       } catch {
         // ignore background poll errors
       } finally {

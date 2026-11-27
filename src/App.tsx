@@ -85,7 +85,7 @@ export const App: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isLoading: isAuthLoading, offlineDemoMode } = useAuth();
-  const [isDataLoading, setIsDataLoading] = useState(false);
+  const [isDataLoading, setIsDataLoading] = useState(true);
 
   // Sync activeTab with current URL route
   const getTabFromPath = (pathname: string): ActiveTab => {
@@ -250,6 +250,23 @@ export const App: React.FC = () => {
             setExpenseCategories(fetchedCats.expenseCategories);
             setAccounts(fetchedAccounts);
             setRecurringTransactions(fetchedRecurring);
+
+            // Automatically check and prune activeAccountId if it is no longer valid or is default
+            const valid = fetchedAccounts.filter(
+              (a) => a.id !== DEFAULT_ACCOUNT_ID && !(a.id === 'default' && a.name === 'Demo company')
+            );
+            if (valid.length === 0) {
+              setOnboardingDone(false);
+              try {
+                localStorage.removeItem(`company_onboarding_done_${currentUserId}`);
+              } catch {}
+            } else if (!valid.some((a) => a.id === activeAccountId)) {
+              // If active account is invalid, do NOT automatically jump in unless already onboarded
+              const storedDone = localStorage.getItem(`company_onboarding_done_${currentUserId}`) === 'true';
+              if (storedDone) {
+                handleSwitchAccount(valid[0].id);
+              }
+            }
 
             // Ensure company creator is registered in teams for all their owned companies
             let mergedTeams = [...fetchedTeamMembers];
@@ -569,7 +586,9 @@ export const App: React.FC = () => {
   const isCompanyAdmin = isUserCompanyAdmin(activeAccount, currentUserId, teamMembers);
   const [onboardingDone, setOnboardingDone] = useState<boolean>(() => {
     try {
-      return localStorage.getItem(`company_onboarding_done_${currentUserId}`) === 'true';
+      const activeId = getActiveAccountId();
+      const storedDone = localStorage.getItem(`company_onboarding_done_${currentUserId}`) === 'true';
+      return storedDone && Boolean(activeId) && activeId !== DEFAULT_ACCOUNT_ID;
     } catch {
       return false;
     }
