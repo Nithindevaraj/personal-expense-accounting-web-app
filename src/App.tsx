@@ -1160,6 +1160,14 @@ export const App: React.FC = () => {
             // ignore storage quota errors
           }
           setOnboardingDone(true);
+          // Immediately verify against Supabase so if user was removed, company is purged
+          void getAccountsFromSupabase().then((verified) => {
+            setAccounts(verified);
+            if (!verified.some((a) => a.id === activeAccountId)) {
+              const fallback = verified[0]?.id || DEFAULT_ACCOUNT_ID;
+              handleSwitchAccount(fallback);
+            }
+          });
         }}
       />
     );

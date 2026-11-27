@@ -116,9 +116,15 @@ export async function saveCategoriesToSupabase(updates: {
 export async function getAccountsFromSupabase(): Promise<Account[]> {
   if (!isSupabaseConfigured) return getStoredAccounts();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return getStoredAccounts();
+
   const { data, error } = await supabase
     .from('user_settings')
     .select('accounts')
+    .eq('user_id', user.id)
     .maybeSingle();
 
   if (error) {
@@ -132,9 +138,54 @@ export async function getAccountsFromSupabase(): Promise<Account[]> {
       )
     : [];
 
-  // When connected to Supabase, cloud accounts is the authoritative single source of truth
-  saveStoredAccounts(cloudAccounts);
-  return cloudAccounts;
+  // Reconcile and validate non-owned company memberships:
+  // If this user does not own a company, verify that the company's owner still lists them in team_members
+  const verifiedAccounts: Account[] = [];
+  let accountsPruned = false;
+
+  for (const acc of cloudAccounts) {
+    // If the user is the creator/owner, they always retain their company
+    if (!acc.ownerId || acc.ownerId === user.id) {
+      verifiedAccounts.push(acc);
+      continue;
+    }
+
+    // Check if the company owner still has this user in their team_members roster
+    try {
+      const { data: ownerSettings } = await supabase
+        .from('user_settings')
+        .select('team_members')
+        .eq('user_id', acc.ownerId)
+        .maybeSingle();
+
+      const ownerTeams = Array.isArray(
+        (ownerSettings as { team_members?: unknown } | null)?.team_members
+      )
+        ? ((ownerSettings as { team_members: TeamMember[] }).team_members)
+        : [];
+
+      const stillMember = ownerTeams.some(
+        (m) => m.accountId === acc.id && (m.userId === user.id || m.userLink.includes(user.id))
+      );
+
+      if (stillMember) {
+        verifiedAccounts.push(acc);
+      } else {
+        // Membership was revoked by the admin!
+        accountsPruned = true;
+      }
+    } catch {
+      // If network fails to verify, keep account to avoid spurious removal
+      verifiedAccounts.push(acc);
+    }
+  }
+
+  if (accountsPruned) {
+    void saveAccountsToSupabase(verifiedAccounts);
+  }
+
+  saveStoredAccounts(verifiedAccounts);
+  return verifiedAccounts;
 }
 
 export async function saveAccountsToSupabase(accounts: Account[]): Promise<void> {
