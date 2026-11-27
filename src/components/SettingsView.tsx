@@ -53,6 +53,7 @@ interface SettingsViewProps {
   activeAccount?: Account;
   isCompanyAdmin?: boolean;
   onUpdateAccount?: (account: Account) => void;
+  onDeleteAccount?: (id: string) => void;
   onUpdateIncomeCategories: (cats: string[]) => void;
   onUpdateExpenseCategories: (cats: string[]) => void;
   onUpdateUserProfile: (profile: UserProfile) => void;
@@ -94,6 +95,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   activeAccount,
   isCompanyAdmin = true,
   onUpdateAccount,
+  onDeleteAccount,
   onUpdateIncomeCategories,
   onUpdateExpenseCategories,
   onUpdateUserProfile,
@@ -614,7 +616,28 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
 
             {isCompanyAdmin && (
-              <div className="flex justify-end">
+              <div className="flex items-center justify-between gap-2 pt-1">
+                {activeAccount && activeAccount.id !== 'default' && onDeleteAccount ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          `Delete company "${activeAccount.name}" and all its data? This cannot be undone.`
+                        )
+                      ) {
+                        onDeleteAccount(activeAccount.id);
+                        setShowCompanyProfilePage(false);
+                      }
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete Company</span>
+                  </button>
+                ) : (
+                  <span />
+                )}
                 <button
                   type="submit"
                   className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer"

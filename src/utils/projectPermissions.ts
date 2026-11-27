@@ -11,6 +11,9 @@ export function isUserCompanyAdmin(
   currentUserId?: string
 ): boolean {
   if (!account || !currentUserId) return false;
+  if (!account.ownerId) {
+    return account.id !== 'default';
+  }
   return account.ownerId === currentUserId;
 }
 

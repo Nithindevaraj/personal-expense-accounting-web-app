@@ -1014,6 +1014,7 @@ export const App: React.FC = () => {
             activeAccount={activeAccount}
             isCompanyAdmin={isCompanyAdmin}
             onUpdateAccount={handleUpdateAccount}
+            onDeleteAccount={handleDeleteAccount}
             onUpdateIncomeCategories={(cats) => {
               if (!isCompanyAdmin) return;
               setIncomeCategories(cats);
