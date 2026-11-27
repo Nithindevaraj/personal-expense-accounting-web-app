@@ -1019,21 +1019,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
                 </button>
 
-                {/* Recurring Transactions Navigation Card */}
-                <button
-                  type="button"
-                  onClick={() => setShowRecurringPage(true)}
-                  className="w-full bg-slate-50/70 hover:bg-slate-100/80 p-3.5 rounded-xl border border-slate-200/80 flex items-center justify-between gap-2 text-left transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <Repeat className="w-4 h-4 text-indigo-600 shrink-0" />
-                    <span className="text-xs sm:text-sm font-bold text-slate-900">
-                      Recurring Transactions
-                    </span>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-                </button>
-
                 {/* Teams Navigation Card */}
                 <button
                   type="button"
@@ -1044,6 +1029,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <Users className="w-4 h-4 text-emerald-600 shrink-0" />
                     <span className="text-xs sm:text-sm font-bold text-slate-900">
                       Teams
+                    </span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                </button>
+
+                {/* Recurring Transactions Navigation Card */}
+                <button
+                  type="button"
+                  onClick={() => setShowRecurringPage(true)}
+                  className="w-full bg-slate-50/70 hover:bg-slate-100/80 p-3.5 rounded-xl border border-slate-200/80 flex items-center justify-between gap-2 text-left transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Repeat className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span className="text-xs sm:text-sm font-bold text-slate-900">
+                      Recurring Transactions
                     </span>
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
