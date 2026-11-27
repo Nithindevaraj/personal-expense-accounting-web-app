@@ -123,12 +123,33 @@ export function saveStoredAccounts(accounts: Account[]): void {
   memoryCache.accounts = accounts;
 }
 
+const ACTIVE_ACCOUNT_KEY = 'accounting_active_account_id';
+
 export function getActiveAccountId(): string {
-  return memoryCache.activeAccountId;
+  if (memoryCache.activeAccountId) return memoryCache.activeAccountId;
+  try {
+    const saved = localStorage.getItem(ACTIVE_ACCOUNT_KEY);
+    if (saved) {
+      memoryCache.activeAccountId = saved;
+      return saved;
+    }
+  } catch {
+    // ignore localStorage errors in private browsing
+  }
+  return '';
 }
 
 export function saveActiveAccountId(accountId: string): void {
   memoryCache.activeAccountId = accountId;
+  try {
+    if (accountId) {
+      localStorage.setItem(ACTIVE_ACCOUNT_KEY, accountId);
+    } else {
+      localStorage.removeItem(ACTIVE_ACCOUNT_KEY);
+    }
+  } catch {
+    // ignore
+  }
 }
 
 export const DEFAULT_USER_PROFILE: UserProfile = {

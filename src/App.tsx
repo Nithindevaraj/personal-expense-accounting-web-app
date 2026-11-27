@@ -257,9 +257,21 @@ export const App: React.FC = () => {
             );
             if (valid.length === 0) {
               setOnboardingDone(false);
-            } else if (!valid.some((a) => a.id === activeAccountId)) {
-              if (onboardingDone) {
-                handleSwitchAccount(valid[0].id);
+            } else {
+              const currentActive = getActiveAccountId();
+              const hasMatching = valid.some((a) => a.id === currentActive || a.id === activeAccountId);
+              if (hasMatching) {
+                const targetId = valid.some((a) => a.id === currentActive) ? currentActive : activeAccountId;
+                setActiveAccountId(targetId);
+                saveActiveAccountId(targetId);
+                setOnboardingDone(true);
+              } else {
+                const fallbackId = valid[0].id;
+                setActiveAccountId(fallbackId);
+                saveActiveAccountId(fallbackId);
+                setOnboardingDone(true);
+                getExpenses(fallbackId).then((tx) => setTransactions(tx)).catch(() => {});
+                getProjectsFromSupabase(fallbackId).then((p) => setProjects(p)).catch(() => {});
               }
             }
 
@@ -579,7 +591,9 @@ export const App: React.FC = () => {
   const currentUserId = user?.id || getOrCreateLocalUserId();
   const activeAccount = accounts.find((a) => a.id === activeAccountId) || accounts[0];
   const isCompanyAdmin = isUserCompanyAdmin(activeAccount, currentUserId, teamMembers);
-  const [onboardingDone, setOnboardingDone] = useState<boolean>(false);
+  const [onboardingDone, setOnboardingDone] = useState<boolean>(() => {
+    return Boolean(getActiveAccountId());
+  });
 
   const handleDeleteTransaction = async (id: string) => {
     const target = transactions.find((t) => t.id === id);
