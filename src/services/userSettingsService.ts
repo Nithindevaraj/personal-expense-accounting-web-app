@@ -122,6 +122,9 @@ export async function getAccountsFromSupabase(): Promise<Account[]> {
   } = await supabase.auth.getUser();
   if (!user) return getStoredAccounts();
 
+  const currentCode = buildIndividualUserCode(user.id);
+  const strippedCurrentCode = currentCode.replace(/[^0-9]/g, '');
+
   // 1. Fetch current user's own settings (contains companies they created/own)
   const { data: ownData, error: ownError } = await supabase
     .from('user_settings')
@@ -146,7 +149,30 @@ export async function getAccountsFromSupabase(): Promise<Account[]> {
     }
   }
 
-  // 2. Discover all companies across Supabase where this user is actively listed as a team member
+  // 2. Discover company memberships from public.company_members registry
+  try {
+    const { data: memberRows, error: memberErr } = await supabase
+      .from('company_members')
+      .select('*')
+      .or(`member_code.eq.${currentCode},member_code.eq.${strippedCurrentCode},member_code.eq.${user.id}`);
+
+    if (!memberErr && Array.isArray(memberRows) && memberRows.length > 0) {
+      for (const row of memberRows) {
+        if (!verifiedMap.has(row.company_id)) {
+          verifiedMap.set(row.company_id, {
+            id: row.company_id,
+            name: row.company_name || 'Assigned Company',
+            ownerId: row.owner_id,
+            createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+          });
+        }
+      }
+    }
+  } catch {
+    // If company_members table not yet migrated, fall back below
+  }
+
+  // 3. Fallback: Discover all companies across user_settings rows
   try {
     const { data: allSettings, error: allErr } = await supabase
       .from('user_settings')
@@ -154,16 +180,11 @@ export async function getAccountsFromSupabase(): Promise<Account[]> {
 
     if (!allErr && Array.isArray(allSettings)) {
       for (const row of allSettings) {
-        // Skip user's own row as it was handled above
         if (row.user_id === user.id) continue;
 
         const ownerTeams = Array.isArray(row.team_members) ? (row.team_members as TeamMember[]) : [];
         const ownerAccounts = Array.isArray(row.accounts) ? (row.accounts as Account[]) : [];
 
-        const currentCode = buildIndividualUserCode(user.id);
-        const strippedCurrentCode = currentCode.replace(/[^0-9]/g, '');
-
-        // Check if any team member entry matches the current user via ID, code, or link
         const memberships = ownerTeams.filter((m) => {
           const mUserId = (m.userId || '').trim();
           const mUserLink = (m.userLink || '').trim();
@@ -194,7 +215,6 @@ export async function getAccountsFromSupabase(): Promise<Account[]> {
 
   const finalAccounts = Array.from(verifiedMap.values());
 
-  // Save the verified list to local storage and sync to user's settings row
   saveStoredAccounts(finalAccounts);
   void saveAccountsToSupabase(finalAccounts);
 
@@ -290,7 +310,7 @@ export async function getTeamMembersFromSupabase(): Promise<TeamMember[]> {
   return cloudMembers;
 }
 
-export async function saveTeamMembersToSupabase(members: TeamMember[]): Promise<void> {
+export async function saveTeamMembersToSupabase(members: TeamMember[], companyName?: string): Promise<void> {
   if (!isSupabaseConfigured) return;
 
   const {
@@ -298,6 +318,7 @@ export async function saveTeamMembersToSupabase(members: TeamMember[]): Promise<
   } = await supabase.auth.getUser();
   if (!user) return;
 
+  // 1. Save to user_settings
   const { error } = await supabase
     .from('user_settings')
     .upsert([{ user_id: user.id, team_members: members }], {
@@ -306,5 +327,28 @@ export async function saveTeamMembersToSupabase(members: TeamMember[]): Promise<
 
   if (error) {
     console.error('Failed to save team members to Supabase:', error.message);
+  }
+
+  // 2. Also register in public.company_members registry for cross-user discovery
+  try {
+    // Delete existing entries for this user's companies in company_members
+    await supabase.from('company_members').delete().eq('owner_id', user.id);
+
+    if (members.length > 0) {
+      const rows = members.map((m) => {
+        const cleanCode = (m.userLink || m.userId).replace(/[\s-]/g, '');
+        return {
+          company_id: m.accountId,
+          company_name: companyName || '',
+          owner_id: user.id,
+          member_code: (cleanCode.length === 16 ? m.userLink || m.userId : m.userId),
+          member_name: m.name || 'Team Member',
+          role: m.role || 'spender',
+        };
+      });
+      await supabase.from('company_members').insert(rows);
+    }
+  } catch {
+    // Graceful fallback if company_members is pending SQL execution
   }
 }

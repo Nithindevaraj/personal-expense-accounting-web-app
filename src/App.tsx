@@ -964,7 +964,7 @@ export const App: React.FC = () => {
     setTeamMembers((prev) => {
       const updated = [...prev, newMember];
       saveStoredTeamMembers(updated);
-      void saveTeamMembersToSupabase(updated);
+      void saveTeamMembersToSupabase(updated, activeAccount?.name);
       return updated;
     });
 

@@ -64,21 +64,32 @@ CREATE TABLE IF NOT EXISTS public.companies (
 );
 
 -- ==============================================================================
--- 4. COMPANY MEMBERS (Responsible persons & RBAC)
--- Roles: 'creator' (super-admin), 'admin' (management), 'spender' (operational)
+-- 4. COMPANY MEMBERS REGISTRY (For cross-user 16-digit code discovery and team management)
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.company_members (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    company_id TEXT NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    name TEXT NOT NULL,
-    designation TEXT DEFAULT '',
-    user_link TEXT DEFAULT '',
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
+    company_id TEXT NOT NULL,
+    company_name TEXT NOT NULL DEFAULT '',
+    owner_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    member_code TEXT NOT NULL,
+    member_name TEXT NOT NULL DEFAULT 'Team Member',
     role TEXT NOT NULL DEFAULT 'spender' CHECK (role IN ('creator', 'admin', 'spender')),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
-    UNIQUE (company_id, user_id)
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
+
+ALTER TABLE public.company_members ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Anyone authenticated can discover their company memberships" ON public.company_members;
+CREATE POLICY "Anyone authenticated can discover their company memberships" ON public.company_members
+    FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Admins can manage their company members" ON public.company_members;
+CREATE POLICY "Admins can manage their company members" ON public.company_members
+    FOR ALL TO authenticated USING (auth.uid() = owner_id)
+    WITH CHECK (auth.uid() = owner_id);
+
+CREATE INDEX IF NOT EXISTS idx_comp_mem_code ON public.company_members (member_code);
+CREATE INDEX IF NOT EXISTS idx_comp_mem_company ON public.company_members (company_id);
 
 -- Trigger: When a company is created, automatically register the creator as 'creator' member
 CREATE OR REPLACE FUNCTION public.handle_new_company()
