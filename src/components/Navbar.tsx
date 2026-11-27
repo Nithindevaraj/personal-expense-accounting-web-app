@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   ReceiptText,
@@ -70,6 +71,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onRenameAccount,
   onDeleteAccount,
 }) => {
+  const navigate = useNavigate();
   const { user, signInWithGoogle } = useAuth();
   const [theme, setTheme] = useState<ThemePreference>(() => getStoredTheme());
   const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(() =>
@@ -387,7 +389,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <nav className="flex items-center gap-1 bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 shadow-2xs overflow-x-auto">
               <button
-                onClick={() => setActiveTab('dashboard')}
+                onClick={() => {
+                  setActiveTab('dashboard');
+                  navigate('/dashboard');
+                }}
                 className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === 'dashboard'
                     ? 'bg-white text-slate-900 shadow-xs font-semibold'
@@ -399,7 +404,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
 
               <button
-                onClick={() => setActiveTab('transactions')}
+                onClick={() => {
+                  setActiveTab('transactions');
+                  navigate('/transactions');
+                }}
                 className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === 'transactions'
                     ? 'bg-white text-slate-900 shadow-xs font-semibold'
@@ -411,7 +419,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
 
               <button
-                onClick={() => setActiveTab('projects')}
+                onClick={() => {
+                  setActiveTab('projects');
+                  navigate('/projects');
+                }}
                 className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === 'projects'
                     ? 'bg-white text-slate-900 shadow-xs font-semibold'
@@ -423,7 +434,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
 
               <button
-                onClick={() => setActiveTab('analytics')}
+                onClick={() => {
+                  setActiveTab('analytics');
+                  navigate('/analytics');
+                }}
                 className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === 'analytics'
                     ? 'bg-white text-slate-900 shadow-xs font-semibold'
@@ -435,7 +449,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
 
               <button
-                onClick={() => setActiveTab('settings')}
+                onClick={() => {
+                  setActiveTab('settings');
+                  navigate('/settings');
+                }}
                 className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === 'settings'
                     ? 'bg-white text-slate-900 shadow-xs font-semibold'
@@ -455,7 +472,10 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="grid grid-cols-5 h-14 items-center px-1">
           {/* Dashboard */}
           <button
-            onClick={() => setActiveTab('dashboard')}
+            onClick={() => {
+              setActiveTab('dashboard');
+              navigate('/dashboard');
+            }}
             className={`flex flex-col items-center justify-center py-1 transition-all ${
               activeTab === 'dashboard'
                 ? 'text-emerald-600 font-bold'
@@ -470,7 +490,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Transactions */}
           <button
-            onClick={() => setActiveTab('transactions')}
+            onClick={() => {
+              setActiveTab('transactions');
+              navigate('/transactions');
+            }}
             className={`relative flex flex-col items-center justify-center py-1 transition-all ${
               activeTab === 'transactions'
                 ? 'text-blue-600 font-bold'
@@ -485,7 +508,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Projects */}
           <button
-            onClick={() => setActiveTab('projects')}
+            onClick={() => {
+              setActiveTab('projects');
+              navigate('/projects');
+            }}
             className={`relative flex flex-col items-center justify-center py-1 transition-all ${
               activeTab === 'projects'
                 ? 'text-indigo-600 font-bold'
@@ -500,7 +526,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Analytics */}
           <button
-            onClick={() => setActiveTab('analytics')}
+            onClick={() => {
+              setActiveTab('analytics');
+              navigate('/analytics');
+            }}
             className={`flex flex-col items-center justify-center py-1 transition-all ${
               activeTab === 'analytics'
                 ? 'text-amber-600 font-bold'
@@ -515,7 +544,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Settings */}
           <button
-            onClick={() => setActiveTab('settings')}
+            onClick={() => {
+              setActiveTab('settings');
+              navigate('/settings');
+            }}
             className={`flex flex-col items-center justify-center py-1 transition-all ${
               activeTab === 'settings'
                 ? 'text-slate-900 font-bold'

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Plus, Loader2 } from 'lucide-react';
 import type {
   Account,
@@ -81,25 +82,25 @@ import {
 } from './services/userSettingsService';
 
 export const App: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { user, isLoading: isAuthLoading, offlineDemoMode } = useAuth();
   const [isDataLoading, setIsDataLoading] = useState(false);
 
-  // Global State
-  const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const tab = params.get('tab');
-      if (
-        tab &&
-        ['dashboard', 'transactions', 'projects', 'analytics', 'settings'].includes(tab)
-      ) {
-        return tab as ActiveTab;
-      }
-    } catch {
-      // ignore
-    }
+  // Sync activeTab with current URL route
+  const getTabFromPath = (pathname: string): ActiveTab => {
+    if (pathname.includes('/transactions')) return 'transactions';
+    if (pathname.includes('/projects')) return 'projects';
+    if (pathname.includes('/analytics')) return 'analytics';
+    if (pathname.includes('/settings')) return 'settings';
     return 'dashboard';
-  });
+  };
+
+  const [activeTab, setActiveTab] = useState<ActiveTab>(() => getTabFromPath(window.location.pathname));
+
+  useEffect(() => {
+    setActiveTab(getTabFromPath(location.pathname));
+  }, [location.pathname]);
   const [accounts, setAccounts] = useState<Account[]>(getStoredAccounts);
   const [activeAccountId, setActiveAccountId] = useState<string>(getActiveAccountId);
   const [transactions, setTransactions] = useState<Transaction[]>(() =>
@@ -710,10 +711,12 @@ export const App: React.FC = () => {
       setTxLedgerFilter({});
     }
     setActiveTab('transactions');
+    navigate('/transactions');
   };
 
   const handleNavigateToProjects = () => {
     setActiveTab('projects');
+    navigate('/projects');
   };
 
   const handleOpenEdit = (t: Transaction) => {
@@ -1285,112 +1288,133 @@ export const App: React.FC = () => {
 
       {/* Main Content Area */}
       <main className="grow max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-24 sm:pb-12">
-        {activeTab === 'dashboard' && (
-          <DashboardView
-            transactions={activeTransactions}
-            projects={activeProjects}
-            onOpenNewTransaction={() => {
-              setEditingTransaction(null);
-              setIsTxModalOpen(true);
-            }}
-            onNavigateToTransactions={handleNavigateToTransactions}
-            onNavigateToProjects={handleNavigateToProjects}
-            onEditTransaction={handleOpenEdit}
+        <Routes>
+          <Route
+            path="/"
+            element={<Navigate to="/dashboard" replace />}
           />
-        )}
-
-        {activeTab === 'transactions' && (
-          <TransactionsView
-            transactions={transactions}
-            projects={activeProjects}
-            incomeCategories={incomeCategories}
-            expenseCategories={expenseCategories}
-            initialFilter={txLedgerFilter}
-            currentUserId={currentUserId}
-            teamMembers={teamMembers}
-            activeAccountId={activeAccountId}
-            onOpenNewTransaction={() => {
-              setEditingTransaction(null);
-              setIsTxModalOpen(true);
-            }}
-            onEditTransaction={handleOpenEdit}
-            onDeleteTransaction={handleDeleteTransaction}
-            onBatchDeleteTransactions={handleBatchDeleteTransactions}
-            onDuplicateTransaction={handleDuplicateTransaction}
-            onViewAttachment={handleViewAttachment}
-          />
-        )}
-
-        {activeTab === 'projects' && (
-          <ProjectsView
-            projects={projects}
-            transactions={transactions}
-            teamMembers={teamMembers}
-            divisions={activeAccount?.divisions || []}
-            currentUserId={currentUserId}
-            isCompanyAdmin={isCompanyAdmin}
-            onAddProject={handleAddProject}
-            onEditProject={handleEditProject}
-            onDeleteProject={handleDeleteProject}
-            onToggleProjectComplete={handleToggleProjectComplete}
-            onViewProjectTransactions={(projectName, subProjectName) =>
-              handleNavigateToTransactions({ tag: projectName, subTag: subProjectName })
+          <Route
+            path="/dashboard"
+            element={
+              <DashboardView
+                transactions={activeTransactions}
+                projects={activeProjects}
+                onOpenNewTransaction={() => {
+                  setEditingTransaction(null);
+                  setIsTxModalOpen(true);
+                }}
+                onNavigateToTransactions={handleNavigateToTransactions}
+                onNavigateToProjects={handleNavigateToProjects}
+                onEditTransaction={handleOpenEdit}
+              />
             }
           />
-        )}
-
-        {activeTab === 'analytics' && (
-          <AnalyticsView transactions={transactions} projects={activeProjects} />
-        )}
-
-        {activeTab === 'settings' && (
-          <SettingsView
-            transactions={transactions}
-            projects={projects}
-            incomeCategories={incomeCategories}
-            expenseCategories={expenseCategories}
-            userProfile={userProfile}
-            activeAccount={activeAccount}
-            isCompanyAdmin={isCompanyAdmin}
-            isCompanyCreator={Boolean(activeAccount?.ownerId && activeAccount.ownerId === currentUserId)}
-            onUpdateAccount={handleUpdateAccount}
-            onDeleteAccount={handleDeleteAccount}
-            onUpdateIncomeCategories={(cats) => {
-              if (!isCompanyAdmin) return;
-              setIncomeCategories(cats);
-              saveStoredIncomeCategories(cats);
-              void saveCategoriesToSupabase({ incomeCategories: cats });
-            }}
-            onUpdateExpenseCategories={(cats) => {
-              if (!isCompanyAdmin) return;
-              setExpenseCategories(cats);
-              saveStoredExpenseCategories(cats);
-              void saveCategoriesToSupabase({ expenseCategories: cats });
-            }}
-            onUpdateUserProfile={(prof) => {
-              setUserProfile(prof);
-              saveUserProfile(prof);
-            }}
-            onImportTransactions={handleImportTransactions}
-            onClearAllData={handleClearAllData}
-            onResetToDefaults={handleResetToDefaults}
-            recurringTransactions={recurringTransactions.filter(
-              (r) => r.accountId === activeAccountId
-            )}
-            onAddRecurring={handleAddRecurring}
-            onEditRecurring={handleEditRecurring}
-            onDeleteRecurring={handleDeleteRecurring}
-            teamMembers={teamMembers.filter((m) => m.accountId === activeAccountId)}
-            onAddTeamMember={handleAddTeamMember}
-            onEditTeamMember={handleEditTeamMember}
-            onDeleteTeamMember={handleDeleteTeamMember}
-            onRefreshTeamMembers={() => {
-              getTeamMembersFromSupabase().then((refreshed) => {
-                setTeamMembers(refreshed);
-              }).catch(() => {});
-            }}
+          <Route
+            path="/transactions"
+            element={
+              <TransactionsView
+                transactions={transactions}
+                projects={activeProjects}
+                incomeCategories={incomeCategories}
+                expenseCategories={expenseCategories}
+                initialFilter={txLedgerFilter}
+                currentUserId={currentUserId}
+                teamMembers={teamMembers}
+                activeAccountId={activeAccountId}
+                onOpenNewTransaction={() => {
+                  setEditingTransaction(null);
+                  setIsTxModalOpen(true);
+                }}
+                onEditTransaction={handleOpenEdit}
+                onDeleteTransaction={handleDeleteTransaction}
+                onBatchDeleteTransactions={handleBatchDeleteTransactions}
+                onDuplicateTransaction={handleDuplicateTransaction}
+                onViewAttachment={handleViewAttachment}
+              />
+            }
           />
-        )}
+          <Route
+            path="/projects"
+            element={
+              <ProjectsView
+                projects={projects}
+                transactions={transactions}
+                teamMembers={teamMembers}
+                divisions={activeAccount?.divisions || []}
+                currentUserId={currentUserId}
+                isCompanyAdmin={isCompanyAdmin}
+                onAddProject={handleAddProject}
+                onEditProject={handleEditProject}
+                onDeleteProject={handleDeleteProject}
+                onToggleProjectComplete={handleToggleProjectComplete}
+                onViewProjectTransactions={(projectName, subProjectName) =>
+                  handleNavigateToTransactions({ tag: projectName, subTag: subProjectName })
+                }
+              />
+            }
+          />
+          <Route
+            path="/analytics"
+            element={
+              <AnalyticsView transactions={transactions} projects={activeProjects} />
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <SettingsView
+                transactions={transactions}
+                projects={projects}
+                incomeCategories={incomeCategories}
+                expenseCategories={expenseCategories}
+                userProfile={userProfile}
+                activeAccount={activeAccount}
+                isCompanyAdmin={isCompanyAdmin}
+                isCompanyCreator={Boolean(activeAccount?.ownerId && activeAccount.ownerId === currentUserId)}
+                onUpdateAccount={handleUpdateAccount}
+                onDeleteAccount={handleDeleteAccount}
+                onUpdateIncomeCategories={(cats) => {
+                  if (!isCompanyAdmin) return;
+                  setIncomeCategories(cats);
+                  saveStoredIncomeCategories(cats);
+                  void saveCategoriesToSupabase({ incomeCategories: cats });
+                }}
+                onUpdateExpenseCategories={(cats) => {
+                  if (!isCompanyAdmin) return;
+                  setExpenseCategories(cats);
+                  saveStoredExpenseCategories(cats);
+                  void saveCategoriesToSupabase({ expenseCategories: cats });
+                }}
+                onUpdateUserProfile={(prof) => {
+                  setUserProfile(prof);
+                  saveUserProfile(prof);
+                }}
+                onImportTransactions={handleImportTransactions}
+                onClearAllData={handleClearAllData}
+                onResetToDefaults={handleResetToDefaults}
+                recurringTransactions={recurringTransactions.filter(
+                  (r) => r.accountId === activeAccountId
+                )}
+                onAddRecurring={handleAddRecurring}
+                onEditRecurring={handleEditRecurring}
+                onDeleteRecurring={handleDeleteRecurring}
+                teamMembers={teamMembers.filter((m) => m.accountId === activeAccountId)}
+                onAddTeamMember={handleAddTeamMember}
+                onEditTeamMember={handleEditTeamMember}
+                onDeleteTeamMember={handleDeleteTeamMember}
+                onRefreshTeamMembers={() => {
+                  getTeamMembersFromSupabase().then((refreshed) => {
+                    setTeamMembers(refreshed);
+                  }).catch(() => {});
+                }}
+              />
+            }
+          />
+          <Route
+            path="*"
+            element={<Navigate to="/dashboard" replace />}
+          />
+        </Routes>
       </main>
 
       {/* Mobile Floating Action Button (FAB) */}
