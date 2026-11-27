@@ -365,7 +365,37 @@ export const App: React.FC = () => {
                 setExpenseCategories(fetchedCats.expenseCategories);
                 setAccounts(fetchedAccounts);
                 setRecurringTransactions(fetchedRecurring);
-                setTeamMembers(fetchedTeamMembers);
+
+                // Ensure company creator is registered in teams for all their owned companies
+                let mergedTeams = [...fetchedTeamMembers];
+                let teamsModified = false;
+                const creatorDisplayName = user.user_metadata?.full_name || userProfile.name || 'Admin';
+                fetchedAccounts.forEach((acc) => {
+                  if (acc.ownerId === currentUserId) {
+                    const exists = mergedTeams.some(
+                      (m) => m.accountId === acc.id && m.userId === currentUserId
+                    );
+                    if (!exists) {
+                      mergedTeams.push({
+                        id: `tm-owner-${acc.id}-${Date.now()}`,
+                        accountId: acc.id,
+                        userId: currentUserId,
+                        userLink: buildIndividualUserLink(currentUserId, creatorDisplayName),
+                        name: creatorDisplayName,
+                        designation: 'Admin / Owner',
+                        role: 'admin',
+                        createdAt: Date.now(),
+                      });
+                      teamsModified = true;
+                    }
+                  }
+                });
+
+                setTeamMembers(mergedTeams);
+                if (teamsModified) {
+                  saveStoredTeamMembers(mergedTeams);
+                  void saveTeamMembersToSupabase(mergedTeams);
+                }
               })
               .catch(() => {});
           }

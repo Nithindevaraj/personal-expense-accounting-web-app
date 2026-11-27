@@ -34,6 +34,7 @@ import type {
 import { formatINR } from '../utils/formatters';
 import {
   type UserProfile,
+  buildIndividualUserLink,
   parseIndividualUserLink,
   saveStoredExpenseCategories,
   saveStoredIncomeCategories,
@@ -1188,86 +1189,114 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           )}
 
           {/* Team Members List */}
-          {teamMembers.length === 0 ? (
-            <div className="p-6 text-center rounded-xl border border-dashed border-slate-200 text-xs text-slate-500">
-              No team members added yet. Paste a member&apos;s individual user link above and assign their designation.
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {teamMembers.map((member) => {
-                const isCompanyCreator = activeAccount?.ownerId && member.userId === activeAccount.ownerId;
-                const effectiveRole = isCompanyCreator ? 'admin' : (member.role || 'spender');
+          {(() => {
+            // Guarantee that if this company has an owner/creator, they are present in the list even before async cloud sync
+            let displayMembers = [...teamMembers];
+            if (activeAccount?.ownerId) {
+              const hasOwner = displayMembers.some((m) => m.userId === activeAccount.ownerId);
+              if (!hasOwner) {
+                const ownerName = activeAccount.name.includes(' ') ? userProfile.name : userProfile.name || 'Admin';
+                displayMembers = [
+                  {
+                    id: `tm-owner-${activeAccount.id}`,
+                    accountId: activeAccount.id,
+                    userId: activeAccount.ownerId,
+                    userLink: buildIndividualUserLink(activeAccount.ownerId, ownerName),
+                    name: ownerName,
+                    designation: 'Admin / Owner',
+                    role: 'admin',
+                    createdAt: activeAccount.createdAt || Date.now(),
+                  },
+                  ...displayMembers,
+                ];
+              }
+            }
 
-                return (
-                <div
-                  key={member.id}
-                  className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs"
-                >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-slate-900">{member.name}</span>
-                      <span className="px-2 py-0.5 rounded-full bg-slate-200/80 text-slate-700 text-[10px] font-medium">
-                        {member.designation}
-                      </span>
-                    </div>
-                    <p className="text-[11px] font-mono text-slate-500 mt-1 truncate">
-                      {member.userLink || member.userId}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {/* Role Dropdown */}
-                    {isCompanyCreator ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-[11px] font-bold">
-                        Admin (Creator)
-                      </span>
-                    ) : isCompanyAdmin && onEditTeamMember ? (
-                      <select
-                        value={effectiveRole}
-                        onChange={(e) => {
-                          const nextRole = e.target.value as 'admin' | 'spender';
-                          onEditTeamMember({
-                            ...member,
-                            role: nextRole,
-                          });
-                          showNotification(`Updated ${member.name} access to ${nextRole === 'admin' ? 'Admin' : 'Spender'}`);
-                        }}
-                        className={`px-2.5 py-1 text-xs rounded-lg border font-bold cursor-pointer transition-colors ${
-                          effectiveRole === 'admin'
-                            ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                            : 'bg-amber-50 text-amber-800 border-amber-300'
-                        }`}
-                      >
-                        <option value="admin">Admin</option>
-                        <option value="spender">Spender</option>
-                      </select>
-                    ) : (
-                      <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold ${
-                          effectiveRole === 'admin'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-amber-100 text-amber-800'
-                        }`}
-                      >
-                        {effectiveRole === 'admin' ? 'Admin' : 'Spender'}
-                      </span>
-                    )}
-
-                    {isCompanyAdmin && !isCompanyCreator && (
-                      <button
-                        type="button"
-                        onClick={() => onDeleteTeamMember(member.id)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer shrink-0"
-                        title="Remove team member"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
+            if (displayMembers.length === 0) {
+              return (
+                <div className="p-6 text-center rounded-xl border border-dashed border-slate-200 text-xs text-slate-500">
+                  No team members added yet. Paste a member&apos;s individual user link above and assign their designation.
                 </div>
               );
-              })}
-            </div>
-          )}
+            }
+
+            return (
+              <div className="space-y-2">
+                {displayMembers.map((member) => {
+                  const isCompanyCreator = activeAccount?.ownerId && member.userId === activeAccount.ownerId;
+                  const effectiveRole = isCompanyCreator ? 'admin' : (member.role || 'spender');
+
+                  return (
+                    <div
+                      key={member.id}
+                      className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-slate-900">{member.name}</span>
+                          <span className="px-2 py-0.5 rounded-full bg-slate-200/80 text-slate-700 text-[10px] font-medium">
+                            {member.designation}
+                          </span>
+                        </div>
+                        <p className="text-[11px] font-mono text-slate-500 mt-1 truncate">
+                          {member.userLink || member.userId}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {/* Role Dropdown */}
+                        {isCompanyCreator ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-[11px] font-bold">
+                            Admin (Creator)
+                          </span>
+                        ) : isCompanyAdmin && onEditTeamMember ? (
+                          <select
+                            value={effectiveRole}
+                            onChange={(e) => {
+                              const nextRole = e.target.value as 'admin' | 'spender';
+                              onEditTeamMember({
+                                ...member,
+                                role: nextRole,
+                              });
+                              showNotification(`Updated ${member.name} access to ${nextRole === 'admin' ? 'Admin' : 'Spender'}`);
+                            }}
+                            className={`px-2.5 py-1 text-xs rounded-lg border font-bold cursor-pointer transition-colors ${
+                              effectiveRole === 'admin'
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                : 'bg-amber-50 text-amber-800 border-amber-300'
+                            }`}
+                          >
+                            <option value="admin">Admin</option>
+                            <option value="spender">Spender</option>
+                          </select>
+                        ) : (
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold ${
+                              effectiveRole === 'admin'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-amber-100 text-amber-800'
+                            }`}
+                          >
+                            {effectiveRole === 'admin' ? 'Admin' : 'Spender'}
+                          </span>
+                        )}
+
+                        {isCompanyAdmin && !isCompanyCreator && (
+                          <button
+                            type="button"
+                            onClick={() => onDeleteTeamMember(member.id)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer shrink-0"
+                            title="Remove team member"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       ) : (
         <>
