@@ -761,6 +761,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                     </div>
                   </th>
 
+                  <th className="p-3 w-32">Division</th>
                   <th className="p-3 w-32">Projects</th>
                   <th className="p-3 w-32">Jobs</th>
                   <th className="p-3 min-w-[180px]">Description</th>
@@ -774,7 +775,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
               <tbody className="divide-y divide-slate-200/60 font-medium">
                 {sorted.length === 0 ? (
                   <tr>
-                    <td colSpan={12} className="py-12 text-center text-slate-400">
+                    <td colSpan={13} className="py-12 text-center text-slate-400">
                       No transactions
                     </td>
                   </tr>
@@ -782,6 +783,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                   sorted.map((t) => {
                     const isIncome = t.type === 'Income';
                     const isSelected = selectedIds.has(t.id);
+                    const projectDivision = projects.find((p) => !p.parentId && p.name === t.tag)?.division;
 
                     return (
                       <tr
@@ -843,6 +845,17 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                         >
                           {isIncome ? '+' : '-'}
                           {formatINR(t.amount)}
+                        </td>
+
+                        {/* Division */}
+                        <td className="p-3">
+                          {projectDivision ? (
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-indigo-50/80 border border-indigo-200/80 text-[11px] font-semibold text-indigo-800 whitespace-nowrap">
+                              {projectDivision}
+                            </span>
+                          ) : (
+                            <span className="text-slate-300">-</span>
+                          )}
                         </td>
 
                         {/* Project Tag */}
