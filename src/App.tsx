@@ -265,7 +265,7 @@ export const App: React.FC = () => {
                     userId: currentUserId,
                     userLink: buildIndividualUserLink(currentUserId, creatorDisplayName),
                     name: creatorDisplayName,
-                    designation: 'Admin / Owner',
+                    designation: '',
                     createdAt: Date.now(),
                   });
                   teamsModified = true;
@@ -382,7 +382,7 @@ export const App: React.FC = () => {
                         userId: currentUserId,
                         userLink: buildIndividualUserLink(currentUserId, creatorDisplayName),
                         name: creatorDisplayName,
-                        designation: 'Admin / Owner',
+                        designation: '',
                         role: 'admin',
                         createdAt: Date.now(),
                       });
@@ -717,7 +717,7 @@ export const App: React.FC = () => {
       userId: currentUserId,
       userLink: buildIndividualUserLink(currentUserId, creatorName),
       name: creatorName,
-      designation: 'Admin / Owner',
+      designation: '',
       createdAt: Date.now(),
     };
     const updatedTeamMembers = [...teamMembers, creatorMember];
