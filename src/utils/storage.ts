@@ -63,16 +63,34 @@ export function parseIndividualUserLink(rawInput: string): {
   userLink: string;
 } {
   const trimmed = rawInput.trim();
+
+  // Case 1: Legacy full URL with query parameters (?member=...&name=...)
   try {
     const url = new URL(trimmed);
     const memberId = url.searchParams.get('member')?.trim();
     const memberName = url.searchParams.get('name')?.trim() || undefined;
     if (memberId) {
-      return { userId: memberId, name: memberName, userLink: buildIndividualUserCode(memberId) };
+      return {
+        userId: memberId,
+        name: memberName,
+        userLink: buildIndividualUserCode(memberId),
+      };
     }
   } catch {
-    // Not a full URL; treat as 16-digit code or raw user ID
+    // Not a full URL
   }
+
+  // Case 2: Clean 16-digit code entered by admin (e.g. "2554-5263-7545-2851" or "2554526375452851")
+  const digitsOnly = trimmed.replace(/[^0-9]/g, '');
+  if (digitsOnly.length === 16) {
+    const formattedCode = `${digitsOnly.slice(0, 4)}-${digitsOnly.slice(4, 8)}-${digitsOnly.slice(8, 12)}-${digitsOnly.slice(12, 16)}`;
+    return {
+      userId: formattedCode,
+      userLink: formattedCode,
+    };
+  }
+
+  // Case 3: Raw UUID / Alphanumeric user ID (hash it to 16 digits)
   return {
     userId: trimmed,
     userLink: buildIndividualUserCode(trimmed),
