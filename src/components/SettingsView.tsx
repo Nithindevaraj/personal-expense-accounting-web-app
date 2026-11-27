@@ -18,9 +18,6 @@ import {
   FolderKanban,
   Users,
   UserPlus,
-  Link2,
-  Copy,
-  Check,
 } from 'lucide-react';
 import type {
   Project,
@@ -32,8 +29,6 @@ import type {
 import { formatINR } from '../utils/formatters';
 import {
   type UserProfile,
-  buildIndividualUserLink,
-  getOrCreateLocalUserId,
   parseIndividualUserLink,
   saveStoredExpenseCategories,
   saveStoredIncomeCategories,
@@ -110,16 +105,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [notification, setNotification] = useState<string | null>(null);
   const [showRecurringPage, setShowRecurringPage] = useState(false);
   const [showTeamsPage, setShowTeamsPage] = useState(false);
-  const [copiedTeamLink, setCopiedTeamLink] = useState(false);
   const [memberLinkInput, setMemberLinkInput] = useState('');
   const [memberNameInput, setMemberNameInput] = useState('');
   const [memberDesignationInput, setMemberDesignationInput] = useState('');
-
-  const individualUserId = user?.id || getOrCreateLocalUserId();
-  const individualUserLink = buildIndividualUserLink(
-    individualUserId,
-    user?.user_metadata?.full_name || userProfile.name
-  );
   const [openSections, setOpenSections] = useState({
     importExport: false,
     incomeCats: false,
@@ -183,23 +171,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setRecDescription('');
     setRecNotes('');
     showNotification(`Recurring ${recType.toLowerCase()} added for ${formatDayOrdinal(parsedDay)} of every month`);
-  };
-
-  const handleCopyTeamUserLink = async () => {
-    try {
-      await navigator.clipboard.writeText(individualUserLink);
-      setCopiedTeamLink(true);
-      setTimeout(() => setCopiedTeamLink(false), 2000);
-    } catch {
-      const input = document.createElement('input');
-      input.value = individualUserLink;
-      document.body.appendChild(input);
-      input.select();
-      document.execCommand('copy');
-      document.body.removeChild(input);
-      setCopiedTeamLink(true);
-      setTimeout(() => setCopiedTeamLink(false), 2000);
-    }
   };
 
   const handleMemberLinkChange = (value: string) => {
@@ -660,43 +631,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <span className="text-[11px] font-semibold text-slate-500">
               Members &amp; Designations
             </span>
-          </div>
-
-          {/* Copyable Individual User Link */}
-          <div className="p-3.5 rounded-xl bg-indigo-50/60 border border-indigo-200/80 space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                <Link2 className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Your Individual User Link</span>
-              </label>
-              <button
-                type="button"
-                onClick={handleCopyTeamUserLink}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold cursor-pointer transition-colors"
-              >
-                {copiedTeamLink ? (
-                  <>
-                    <Check className="w-3 h-3" />
-                    <span>Copied!</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3 h-3" />
-                    <span>Copy Link</span>
-                  </>
-                )}
-              </button>
-            </div>
-            <input
-              type="text"
-              readOnly
-              value={individualUserLink}
-              onClick={(e) => (e.target as HTMLInputElement).select()}
-              className="w-full px-2.5 py-1.5 text-[11px] font-mono bg-white border border-indigo-200 rounded-xl text-slate-700 focus:outline-hidden"
-            />
-            <p className="text-[11px] text-slate-500">
-              Copy and share this individual link to add a user to a team.
-            </p>
           </div>
 
           {/* Add Team Member Form */}
