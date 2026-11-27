@@ -687,6 +687,15 @@ export const App: React.FC = () => {
     setTeamMembers(remainingTeams);
     saveStoredTeamMembers(remainingTeams);
 
+    if (nextAccounts.length === 0) {
+      try {
+        localStorage.removeItem(`company_onboarding_done_${currentUserId}`);
+      } catch {
+        // ignore storage errors
+      }
+      setOnboardingDone(false);
+    }
+
     if (activeAccountId === id) {
       const nextActiveId = nextAccounts[0]?.id || DEFAULT_ACCOUNT_ID;
       handleSwitchAccount(nextActiveId);

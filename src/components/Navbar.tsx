@@ -237,6 +237,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                                       onClick={() => {
                                         if (window.confirm(`Delete company "${acc.name}"?`)) {
                                           onDeleteAccount(acc.id);
+                                          setIsAccountMenuOpen(false);
                                         }
                                       }}
                                       className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
