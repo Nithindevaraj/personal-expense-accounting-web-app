@@ -101,6 +101,7 @@ export interface TeamMember {
   userLink: string;
   name: string;
   designation: string;
+  role?: 'admin' | 'spender';
   createdAt: number;
 }
 

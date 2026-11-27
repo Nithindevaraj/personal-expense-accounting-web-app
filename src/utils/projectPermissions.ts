@@ -1,4 +1,4 @@
-import type { Account, Project, ProjectAccessRole, Transaction } from '../types';
+import type { Account, Project, ProjectAccessRole, TeamMember, Transaction } from '../types';
 
 export type EffectiveProjectRole = 'owner' | ProjectAccessRole;
 
@@ -8,13 +8,27 @@ export type EffectiveProjectRole = 'owner' | ProjectAccessRole;
  */
 export function isUserCompanyAdmin(
   account: Account | undefined,
-  currentUserId?: string
+  currentUserId?: string,
+  teamMembers?: TeamMember[]
 ): boolean {
   if (!account || !currentUserId) return false;
   if (!account.ownerId) {
-    return account.id !== 'default';
+    if (account.id === 'default') return false;
+  } else if (account.ownerId === currentUserId) {
+    return true;
   }
-  return account.ownerId === currentUserId;
+
+  // Also check if user is registered with 'admin' role in company team
+  if (teamMembers && teamMembers.length > 0) {
+    const member = teamMembers.find(
+      (m) => m.accountId === account.id && m.userId === currentUserId
+    );
+    if (member?.role === 'admin') {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /**
@@ -23,10 +37,22 @@ export function isUserCompanyAdmin(
  */
 export function getUserProjectRole(
   project: Project | undefined,
-  currentUserId?: string
+  currentUserId?: string,
+  companyTeamMembers?: TeamMember[],
+  activeAccountId?: string
 ): EffectiveProjectRole {
   if (!project || !currentUserId) return 'owner';
   if (!project.ownerId || project.ownerId === currentUserId) return 'owner';
+
+  // If user is a company-level admin, they inherit admin authority over all projects
+  if (companyTeamMembers && activeAccountId) {
+    const companyMember = companyTeamMembers.find(
+      (m) => m.accountId === activeAccountId && m.userId === currentUserId
+    );
+    if (companyMember?.role === 'admin') {
+      return 'admin';
+    }
+  }
 
   const assignment = project.teamMembers?.find((m) => m.userId === currentUserId);
   if (assignment) return assignment.role;
@@ -42,12 +68,14 @@ export function getUserProjectRole(
 export function canModifyTransaction(
   tx: Transaction,
   projects: Project[],
-  currentUserId?: string
+  currentUserId?: string,
+  companyTeamMembers?: TeamMember[],
+  activeAccountId?: string
 ): boolean {
   if (!currentUserId) return true;
 
   const project = projects.find((p) => !p.parentId && p.name === tx.tag);
-  const role = getUserProjectRole(project, currentUserId);
+  const role = getUserProjectRole(project, currentUserId, companyTeamMembers, activeAccountId);
 
   if (role === 'owner' || role === 'admin') {
     return true;

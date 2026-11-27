@@ -18,7 +18,7 @@ import {
   Pencil,
   Trash2,
 } from 'lucide-react';
-import type { Account } from '../types';
+import type { Account, TeamMember } from '../types';
 import { DEFAULT_ACCOUNT_ID } from '../types';
 import { formatINR } from '../utils/formatters';
 import type { UserProfile } from '../utils/storage';
@@ -45,6 +45,7 @@ interface NavbarProps {
   userProfile: UserProfile;
   onOpenProfile: () => void;
   accounts: Account[];
+  teamMembers?: TeamMember[];
   activeAccountId: string;
   currentUserId?: string;
   onSwitchAccount: (id: string) => void;
@@ -61,6 +62,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   userProfile,
   onOpenProfile,
   accounts,
+  teamMembers = [],
   activeAccountId,
   currentUserId,
   onSwitchAccount,
@@ -219,7 +221,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                                   {isActive && <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 ml-auto" />}
                                 </button>
                                 <div className="flex items-center gap-0.5 shrink-0">
-                                  {isUserCompanyAdmin(acc, currentUserId) && (
+                                  {isUserCompanyAdmin(acc, currentUserId, teamMembers) && (
                                     <button
                                       type="button"
                                       onClick={() => {
@@ -232,7 +234,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                                       <Pencil className="w-3 h-3" />
                                     </button>
                                   )}
-                                  {isUserCompanyAdmin(acc, currentUserId) && (
+                                  {isUserCompanyAdmin(acc, currentUserId, teamMembers) && (
                                     confirmDeleteId === acc.id ? (
                                       <button
                                         type="button"

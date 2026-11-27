@@ -68,6 +68,7 @@ interface SettingsViewProps {
   onDeleteRecurring: (id: string) => void;
   teamMembers: TeamMember[];
   onAddTeamMember: (member: Omit<TeamMember, 'id' | 'accountId' | 'createdAt'>) => void;
+  onEditTeamMember?: (member: TeamMember) => void;
   onDeleteTeamMember: (id: string) => void;
 }
 
@@ -108,6 +109,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onDeleteRecurring,
   teamMembers,
   onAddTeamMember,
+  onEditTeamMember,
   onDeleteTeamMember,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -130,6 +132,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [memberLinkInput, setMemberLinkInput] = useState('');
   const [memberNameInput, setMemberNameInput] = useState('');
   const [memberDesignationInput, setMemberDesignationInput] = useState('');
+  const [memberRoleInput, setMemberRoleInput] = useState<'admin' | 'spender'>('spender');
   const [openSections, setOpenSections] = useState({
     company: false,
     importExport: false,
@@ -360,10 +363,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       userLink: parsed.userLink,
       name: memberNameInput.trim() || parsed.name || 'Team Member',
       designation: memberDesignationInput.trim(),
+      role: memberRoleInput,
     });
     setMemberLinkInput('');
     setMemberNameInput('');
     setMemberDesignationInput('');
+    setMemberRoleInput('spender');
     showNotification('Team member added');
   };
 
@@ -1154,6 +1159,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   className="w-full px-3 py-2 text-base sm:text-xs bg-white border border-slate-200 rounded-xl font-medium text-slate-800"
                 />
               </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                  Access Level *
+                </label>
+                <select
+                  value={memberRoleInput}
+                  onChange={(e) => setMemberRoleInput(e.target.value as 'admin' | 'spender')}
+                  className="w-full px-3 py-2 text-base sm:text-xs bg-white border border-slate-200 rounded-xl font-semibold text-slate-800"
+                >
+                  <option value="admin">Admin (Full company & project management)</option>
+                  <option value="spender">Spender (Transactions under assigned project only)</option>
+                </select>
+              </div>
             </div>
 
             <div className="flex justify-end pt-1">
@@ -1175,7 +1194,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           ) : (
             <div className="space-y-2">
-              {teamMembers.map((member) => (
+              {teamMembers.map((member) => {
+                const isCompanyCreator = activeAccount?.ownerId && member.userId === activeAccount.ownerId;
+                const effectiveRole = isCompanyCreator ? 'admin' : (member.role || 'spender');
+
+                return (
                 <div
                   key={member.id}
                   className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs"
@@ -1183,7 +1206,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-bold text-slate-900">{member.name}</span>
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded-full bg-slate-200/80 text-slate-700 text-[10px] font-medium">
                         {member.designation}
                       </span>
                     </div>
@@ -1191,18 +1214,58 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       {member.userLink || member.userId}
                     </p>
                   </div>
-                  {isCompanyAdmin && (
-                    <button
-                      type="button"
-                      onClick={() => onDeleteTeamMember(member.id)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer shrink-0"
-                      title="Remove team member"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {/* Role Dropdown */}
+                    {isCompanyCreator ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-[11px] font-bold">
+                        Admin (Creator)
+                      </span>
+                    ) : isCompanyAdmin && onEditTeamMember ? (
+                      <select
+                        value={effectiveRole}
+                        onChange={(e) => {
+                          const nextRole = e.target.value as 'admin' | 'spender';
+                          onEditTeamMember({
+                            ...member,
+                            role: nextRole,
+                          });
+                          showNotification(`Updated ${member.name} access to ${nextRole === 'admin' ? 'Admin' : 'Spender'}`);
+                        }}
+                        className={`px-2.5 py-1 text-xs rounded-lg border font-bold cursor-pointer transition-colors ${
+                          effectiveRole === 'admin'
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                            : 'bg-amber-50 text-amber-800 border-amber-300'
+                        }`}
+                      >
+                        <option value="admin">Admin</option>
+                        <option value="spender">Spender</option>
+                      </select>
+                    ) : (
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold ${
+                          effectiveRole === 'admin'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-amber-100 text-amber-800'
+                        }`}
+                      >
+                        {effectiveRole === 'admin' ? 'Admin' : 'Spender'}
+                      </span>
+                    )}
+
+                    {isCompanyAdmin && !isCompanyCreator && (
+                      <button
+                        type="button"
+                        onClick={() => onDeleteTeamMember(member.id)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer shrink-0"
+                        title="Remove team member"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
           )}
         </div>

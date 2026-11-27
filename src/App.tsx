@@ -443,7 +443,7 @@ export const App: React.FC = () => {
 
   const currentUserId = user?.id || getOrCreateLocalUserId();
   const activeAccount = accounts.find((a) => a.id === activeAccountId) || accounts[0];
-  const isCompanyAdmin = isUserCompanyAdmin(activeAccount, currentUserId);
+  const isCompanyAdmin = isUserCompanyAdmin(activeAccount, currentUserId, teamMembers);
   const [onboardingDone, setOnboardingDone] = useState<boolean>(() => {
     try {
       return localStorage.getItem(`company_onboarding_done_${currentUserId}`) === 'true';
@@ -454,7 +454,7 @@ export const App: React.FC = () => {
 
   const handleDeleteTransaction = async (id: string) => {
     const target = transactions.find((t) => t.id === id);
-    if (target && !canModifyTransaction(target, projects, currentUserId)) return;
+    if (target && !canModifyTransaction(target, projects, currentUserId, teamMembers, activeAccountId)) return;
 
     // 1. Optimistic UI update
     const updated = transactions.filter((t) => t.id !== id);
@@ -472,7 +472,7 @@ export const App: React.FC = () => {
   const handleBatchDeleteTransactions = async (ids: string[]) => {
     const allowedIds = ids.filter((id) => {
       const target = transactions.find((t) => t.id === id);
-      return !target || canModifyTransaction(target, projects, currentUserId);
+      return !target || canModifyTransaction(target, projects, currentUserId, teamMembers, activeAccountId);
     });
     if (allowedIds.length === 0) return;
 
@@ -606,7 +606,7 @@ export const App: React.FC = () => {
   };
 
   const handleOpenEdit = (t: Transaction) => {
-    if (!canModifyTransaction(t, projects, currentUserId)) return;
+    if (!canModifyTransaction(t, projects, currentUserId, teamMembers, activeAccountId)) return;
     setEditingTransaction(t);
     setIsTxModalOpen(true);
   };
@@ -700,7 +700,7 @@ export const App: React.FC = () => {
 
   const handleRenameAccount = (id: string, name: string) => {
     const target = accounts.find((a) => a.id === id);
-    if (!isUserCompanyAdmin(target, currentUserId)) return;
+    if (!isUserCompanyAdmin(target, currentUserId, teamMembers)) return;
     const nextAccounts = accounts.map((a) => (a.id === id ? { ...a, name } : a));
     setAccounts(nextAccounts);
     saveStoredAccounts(nextAccounts);
@@ -708,7 +708,7 @@ export const App: React.FC = () => {
   };
 
   const handleUpdateAccount = (updatedAccount: Account) => {
-    if (!isUserCompanyAdmin(updatedAccount, currentUserId)) return;
+    if (!isUserCompanyAdmin(updatedAccount, currentUserId, teamMembers)) return;
     const nextAccounts = accounts.map((a) =>
       a.id === updatedAccount.id ? updatedAccount : a
     );
@@ -719,7 +719,7 @@ export const App: React.FC = () => {
 
   const handleDeleteAccount = async (id: string) => {
     const target = accounts.find((a) => a.id === id);
-    if (!isUserCompanyAdmin(target, currentUserId)) return;
+    if (!isUserCompanyAdmin(target, currentUserId, teamMembers)) return;
 
     const nextAccounts = accounts.filter((a) => a.id !== id);
     setAccounts(nextAccounts);
@@ -814,6 +814,15 @@ export const App: React.FC = () => {
     };
     setTeamMembers((prev) => {
       const updated = [...prev, newMember];
+      saveStoredTeamMembers(updated);
+      void saveTeamMembersToSupabase(updated);
+      return updated;
+    });
+  };
+
+  const handleEditTeamMember = (updatedMember: TeamMember) => {
+    setTeamMembers((prev) => {
+      const updated = prev.map((m) => (m.id === updatedMember.id ? updatedMember : m));
       saveStoredTeamMembers(updated);
       void saveTeamMembersToSupabase(updated);
       return updated;
@@ -977,6 +986,7 @@ export const App: React.FC = () => {
         userProfile={userProfile}
         onOpenProfile={() => setIsProfileModalOpen(true)}
         accounts={accounts}
+        teamMembers={teamMembers}
         activeAccountId={activeAccountId}
         currentUserId={currentUserId}
         onSwitchAccount={handleSwitchAccount}
@@ -1089,6 +1099,7 @@ export const App: React.FC = () => {
             onDeleteRecurring={handleDeleteRecurring}
             teamMembers={teamMembers.filter((m) => m.accountId === activeAccountId)}
             onAddTeamMember={handleAddTeamMember}
+            onEditTeamMember={handleEditTeamMember}
             onDeleteTeamMember={handleDeleteTeamMember}
           />
         )}
