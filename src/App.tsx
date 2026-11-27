@@ -899,6 +899,7 @@ export const App: React.FC = () => {
             projects={projects}
             transactions={transactions}
             teamMembers={teamMembers}
+            divisions={(accounts.find((a) => a.id === activeAccountId) || accounts[0])?.divisions || []}
             currentUserId={currentUserId}
             onAddProject={handleAddProject}
             onEditProject={handleEditProject}

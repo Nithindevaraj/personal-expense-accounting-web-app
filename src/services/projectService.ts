@@ -12,6 +12,7 @@ interface DbProjectRow {
   color: string | null;
   completed: boolean;
   completed_at: string | null;
+  division?: string | null;
   team_members?: ProjectTeamAssignment[] | null;
   created_at: string;
 }
@@ -26,6 +27,7 @@ function mapRowToProject(row: DbProjectRow): Project {
     color: row.color || '#3b82f6',
     completed: Boolean(row.completed),
     completedAt: row.completed_at ? new Date(row.completed_at).getTime() : null,
+    division: row.division || null,
     ownerId: row.user_id || undefined,
     teamMembers: Array.isArray(row.team_members) ? row.team_members : undefined,
     createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
@@ -35,7 +37,7 @@ function mapRowToProject(row: DbProjectRow): Project {
 function mapProjectToPayload(
   project: Project,
   accountId: string = 'default',
-  includeTeamMembers: boolean = true
+  includeExtendedFields: boolean = true
 ) {
   const base = {
     id: project.id,
@@ -50,9 +52,10 @@ function mapProjectToPayload(
     account_id: accountId,
   };
 
-  if (!includeTeamMembers) return base;
+  if (!includeExtendedFields) return base;
   return {
     ...base,
+    division: project.division || null,
     team_members: project.teamMembers || [],
   };
 }
@@ -104,7 +107,7 @@ export async function upsertProjectToSupabase(
     .upsert([mapProjectToPayload(project, accountId, true)], { onConflict: 'id' });
 
   if (error) {
-    if (error.message.includes('team_members')) {
+    if (error.message.includes('team_members') || error.message.includes('division')) {
       const { error: fallbackError } = await supabase
         .from('projects')
         .upsert([mapProjectToPayload(project, accountId, false)], { onConflict: 'id' });

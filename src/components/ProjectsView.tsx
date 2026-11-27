@@ -20,6 +20,7 @@ import {
   Users,
   UserPlus,
   Shield,
+  Building2,
 } from 'lucide-react';
 import {
   isGeneralProject,
@@ -35,6 +36,7 @@ interface ProjectsViewProps {
   projects: Project[];
   transactions: Transaction[];
   teamMembers?: TeamMember[];
+  divisions?: string[];
   currentUserId?: string;
   onAddProject: (project: Omit<Project, 'id' | 'createdAt'>) => void;
   onEditProject: (project: Project) => void;
@@ -47,6 +49,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   projects,
   transactions,
   teamMembers = [],
+  divisions = [],
   currentUserId,
   onAddProject,
   onEditProject,
@@ -68,6 +71,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   const [description, setDescription] = useState('');
   const [budget, setBudget] = useState('');
   const [color, setColor] = useState('#3b82f6');
+  const [division, setDivision] = useState('');
   const [budgetPrompt, setBudgetPrompt] = useState<{
     parentBudget: number;
     otherSubTotal: number;
@@ -218,6 +222,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     setDescription('');
     setBudget('');
     setColor('#3b82f6');
+    setDivision('');
     setProjectTeam([]);
     setSelectedMemberId('');
     setSelectedMemberRole('spender');
@@ -233,6 +238,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     setDescription('');
     setBudget('');
     setColor(parent.color || '#3b82f6');
+    setDivision('');
     setProjectTeam([]);
     setSelectedMemberId('');
     setSelectedMemberRole('spender');
@@ -250,6 +256,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     setDescription(p.description || '');
     setBudget(p.budget ? String(p.budget) : '');
     setColor(p.color || '#3b82f6');
+    setDivision(p.division || '');
     setProjectTeam(p.teamMembers || []);
     setSelectedMemberId('');
     setSelectedMemberRole('spender');
@@ -305,6 +312,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         description: description.trim(),
         budget: parsedBudget,
         color,
+        division: !parentForNewSub ? (division || null) : editingProject.division,
         teamMembers: !parentForNewSub ? projectTeam : editingProject.teamMembers,
       });
     } else {
@@ -314,6 +322,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         description: description.trim(),
         budget: parsedBudget,
         color,
+        division: !parentForNewSub ? (division || null) : undefined,
         ownerId: currentUserId,
         teamMembers: !parentForNewSub ? projectTeam : undefined,
       });
@@ -555,10 +564,9 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
             </div>
           ) : (
             <>
-              {/* Project Cards Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {calculatedProjects.map((p) => {
-          return (
+              {/* Project Cards Grid (Grouped by Division when divisions exist) */}
+              {(() => {
+                const renderProjectCard = (p: (typeof calculatedProjects)[number]) => (
             <div
               key={p.id}
               className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group"
@@ -791,9 +799,77 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                 <ExternalLink className="w-3.5 h-3.5" />
               </button>
             </div>
-          );
-        })}
-      </div>
+                );
+
+                const hasDivisions =
+                  divisions.length > 0 || calculatedProjects.some((p) => Boolean(p.division));
+
+                if (!hasDivisions) {
+                  return (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                      {calculatedProjects.map(renderProjectCard)}
+                    </div>
+                  );
+                }
+
+                const orderedDivisions = [...divisions];
+                for (const p of calculatedProjects) {
+                  if (p.division && !orderedDivisions.includes(p.division)) {
+                    orderedDivisions.push(p.division);
+                  }
+                }
+
+                const unassigned = calculatedProjects.filter((p) => !p.division);
+
+                return (
+                  <div className="space-y-6">
+                    {orderedDivisions.map((divName) => {
+                      const divProjects = calculatedProjects.filter(
+                        (p) => p.division === divName
+                      );
+                      return (
+                        <div key={divName} className="space-y-3">
+                          <div className="flex items-center justify-between px-1">
+                            <div className="flex items-center gap-2">
+                              <Building2 className="w-4 h-4 text-indigo-600 shrink-0" />
+                              <h2 className="text-sm font-bold text-slate-800">{divName}</h2>
+                            </div>
+                            <span className="text-[11px] font-semibold text-slate-500">
+                              {divProjects.length} {divProjects.length === 1 ? 'project' : 'projects'}
+                            </span>
+                          </div>
+                          {divProjects.length === 0 ? (
+                            <div className="p-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 text-xs text-slate-500">
+                              No active projects in {divName}. Assign a project to this division via Edit Project.
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                              {divProjects.map(renderProjectCard)}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {unassigned.length > 0 && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between px-1">
+                          <div className="flex items-center gap-2">
+                            <Layers className="w-4 h-4 text-slate-500 shrink-0" />
+                            <h2 className="text-sm font-bold text-slate-700">General / Unassigned</h2>
+                          </div>
+                          <span className="text-[11px] font-semibold text-slate-500">
+                            {unassigned.length} {unassigned.length === 1 ? 'project' : 'projects'}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                          {unassigned.map(renderProjectCard)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
       {/* Spreadsheet Master Table (Replicating Projects!A3:D100) */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
@@ -1123,6 +1199,29 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                   className="w-full px-3 py-2.5 text-base sm:text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-medium"
                 />
               </div>
+
+              {!parentForNewSub && (divisions.length > 0 || division) && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Division
+                  </label>
+                  <select
+                    value={division}
+                    onChange={(e) => setDivision(e.target.value)}
+                    className="w-full px-3 py-2.5 text-base sm:text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-medium text-slate-800"
+                  >
+                    <option value="">General / Unassigned</option>
+                    {divisions.map((divName) => (
+                      <option key={divName} value={divName}>
+                        {divName}
+                      </option>
+                    ))}
+                    {division && !divisions.includes(division) && (
+                      <option value={division}>{division}</option>
+                    )}
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">

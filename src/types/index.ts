@@ -35,6 +35,7 @@ export interface Project {
   color?: string;
   completed?: boolean;
   completedAt?: number | null;
+  division?: string | null;
   ownerId?: string;
   teamMembers?: ProjectTeamAssignment[];
   createdAt: number;
