@@ -121,7 +121,10 @@ export function getStoredAccounts(): Account[] {
       return DEFAULT_ACCOUNTS;
     }
     const parsed = JSON.parse(data);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_ACCOUNTS;
+    if (!Array.isArray(parsed)) return DEFAULT_ACCOUNTS;
+    return parsed.filter(
+      (a: Account) => !(a.id === DEFAULT_ACCOUNT_ID && a.name === 'Demo company')
+    );
   } catch {
     return DEFAULT_ACCOUNTS;
   }

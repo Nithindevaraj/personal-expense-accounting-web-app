@@ -129,7 +129,9 @@ export async function getAccountsFromSupabase(): Promise<Account[]> {
   }
 
   const cloudAccounts = Array.isArray((data as { accounts?: unknown } | null)?.accounts)
-    ? ((data as { accounts: Account[] }).accounts)
+    ? ((data as { accounts: Account[] }).accounts).filter(
+        (a) => !(a.id === 'default' && a.name === 'Demo company')
+      )
     : [];
 
   if (cloudAccounts.length === 0) {

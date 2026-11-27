@@ -92,7 +92,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, [isAccountMenuOpen]);
 
   const activeAccount =
-    accounts.find((a) => a.id === activeAccountId) || accounts[0] || { id: DEFAULT_ACCOUNT_ID, name: 'Demo company' };
+    accounts.find((a) => a.id === activeAccountId) || accounts[0] || { id: DEFAULT_ACCOUNT_ID, name: 'Personal' };
 
   useEffect(() => {
     const mq = window.matchMedia?.('(prefers-color-scheme: dark)');
@@ -161,6 +161,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </div>
 
                     <div className="space-y-1 max-h-56 overflow-y-auto my-1">
+                      {accounts.length === 0 && (
+                        <p className="px-2 py-2 text-[11px] text-slate-400">
+                          No companies yet. Create one below.
+                        </p>
+                      )}
                       {accounts.map((acc) => {
                         const isActive = acc.id === activeAccountId;
                         const isEditing = editingAccountId === acc.id;
