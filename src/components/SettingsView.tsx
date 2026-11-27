@@ -1,4 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Download,
   Upload,
@@ -20,6 +21,7 @@ import {
   UserPlus,
   Building2,
   Edit2,
+  X,
 } from 'lucide-react';
 import type {
   Account,
@@ -195,6 +197,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [recDescription, setRecDescription] = useState('');
   const [recNotes, setRecNotes] = useState('');
   const [editingRecurring, setEditingRecurring] = useState<RecurringTransaction | null>(null);
+  const [isRecurringModalOpen, setIsRecurringModalOpen] = useState(false);
 
   const handleRecTypeChange = (nextType: TransactionType) => {
     setRecType(nextType);
@@ -202,6 +205,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     if (!list.includes(recCategory)) {
       setRecCategory(list[0] || (nextType === 'Income' ? 'Salary' : 'Food'));
     }
+  };
+
+  const handleOpenAddRecurring = () => {
+    setEditingRecurring(null);
+    setRecType('Expense');
+    setRecDay('7');
+    setRecAmount('');
+    setRecTag(topProjects[0]?.name || 'General Transactions');
+    setRecSubTag(null);
+    setRecCategory(expenseCategories[0] || 'Rents');
+    setRecDescription('');
+    setRecNotes('');
+    setIsRecurringModalOpen(true);
   };
 
   const handleStartEditRecurring = (item: RecurringTransaction) => {
@@ -214,9 +230,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setRecCategory(item.category);
     setRecDescription(item.description || '');
     setRecNotes(item.notes || '');
+    setIsRecurringModalOpen(true);
   };
 
   const handleCancelEditRecurring = () => {
+    setIsRecurringModalOpen(false);
     setEditingRecurring(null);
     setRecAmount('');
     setRecDescription('');
@@ -244,6 +262,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         description: recDescription.trim(),
         notes: recNotes.trim(),
       });
+      setIsRecurringModalOpen(false);
       setEditingRecurring(null);
       setRecAmount('');
       setRecDescription('');
@@ -263,6 +282,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       notes: recNotes.trim(),
     });
 
+    setIsRecurringModalOpen(false);
     setRecAmount('');
     setRecDescription('');
     setRecNotes('');
@@ -692,7 +712,47 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
 
           <div className="space-y-4">
-            <form onSubmit={handleCreateRecurring} className="space-y-3 bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80">
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={handleOpenAddRecurring}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold cursor-pointer shadow-xs"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Recurring Transaction</span>
+              </button>
+            </div>
+
+            {groupedRecurringByDivision.length === 0 && (
+              <div className="text-center py-8 bg-slate-50/70 rounded-xl border border-dashed border-slate-200">
+                <p className="text-xs text-slate-500">
+                  No recurring transactions yet. Tap &ldquo;Add Recurring Transaction&rdquo; to create one.
+                </p>
+              </div>
+            )}
+
+            {isRecurringModalOpen &&
+              createPortal(
+                <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 pb-20 sm:pb-4">
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-5 sm:p-6 animate-fade-in max-h-[85dvh] overflow-y-auto space-y-4">
+                    <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <Repeat className="w-4 h-4 text-indigo-600 shrink-0" />
+                        <h3 className="text-sm sm:text-base font-bold text-slate-900">
+                          {editingRecurring ? 'Edit Recurring Transaction' : 'Add Recurring Transaction'}
+                        </h3>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleCancelEditRecurring}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+                        aria-label="Close modal"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+            <form onSubmit={handleCreateRecurring} className="space-y-3">
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
@@ -831,16 +891,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-1">
-                {editingRecurring && (
-                  <button
-                    type="button"
-                    onClick={handleCancelEditRecurring}
-                    className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-bold cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                )}
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={handleCancelEditRecurring}
+                  className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-bold cursor-pointer"
+                >
+                  Cancel
+                </button>
                 <button
                   type="submit"
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold cursor-pointer shadow-xs"
@@ -850,6 +908,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </button>
               </div>
             </form>
+                  </div>
+                </div>,
+                document.body
+              )}
 
             {groupedRecurringByDivision.length > 0 && (
               <div className="space-y-4">
