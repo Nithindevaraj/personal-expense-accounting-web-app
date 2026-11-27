@@ -17,6 +17,7 @@ import {
 } from './types';
 import {
   type UserProfile,
+  buildIndividualUserCode,
   buildIndividualUserLink,
   getActiveAccountId,
   getOrCreateLocalUserId,
@@ -310,6 +311,7 @@ export const App: React.FC = () => {
     // Subscribe to Supabase Realtime changes for cross-device updates and company assignments
     let channel: ReturnType<typeof supabase.channel> | null = null;
     let assignmentChannel: ReturnType<typeof supabase.channel> | null = null;
+    let codeAssignmentChannel: ReturnType<typeof supabase.channel> | null = null;
     let globalTeamChannel: ReturnType<typeof supabase.channel> | null = null;
     if (isSupabaseConfigured) {
       // Global broadcast channel for instant multi-device team member synchronization
@@ -322,6 +324,27 @@ export const App: React.FC = () => {
         })
         .subscribe();
 
+      const myCode = buildIndividualUserCode(user.id);
+      const cleanMyCode = myCode.replace(/[^0-9]/g, '');
+
+      if (cleanMyCode.length === 16) {
+        codeAssignmentChannel = supabase
+          .channel(`company-assignments-${cleanMyCode}`)
+          .on('broadcast', { event: 'company-added' }, (payload: { payload?: { company?: Account } }) => {
+            const addedCompany = payload?.payload?.company;
+            if (addedCompany && addedCompany.id) {
+              setAccounts((prevAccounts) => {
+                if (prevAccounts.some((a) => a.id === addedCompany.id)) return prevAccounts;
+                const nextAccounts = [...prevAccounts, addedCompany];
+                saveStoredAccounts(nextAccounts);
+                void saveAccountsToSupabase(nextAccounts);
+                return nextAccounts;
+              });
+              setOnboardingDone(true);
+            }
+          })
+          .subscribe();
+      }
       assignmentChannel = supabase
         .channel(`company-assignments-${user.id}`)
         .on('broadcast', { event: 'company-added' }, (payload: { payload?: { company?: Account } }) => {
@@ -334,6 +357,7 @@ export const App: React.FC = () => {
               void saveAccountsToSupabase(nextAccounts);
               return nextAccounts;
             });
+            setOnboardingDone(true);
           }
         })
         .on('broadcast', { event: 'company-removed' }, (payload: { payload?: { companyId?: string } }) => {
@@ -460,6 +484,9 @@ export const App: React.FC = () => {
       }
       if (assignmentChannel) {
         supabase.removeChannel(assignmentChannel);
+      }
+      if (codeAssignmentChannel) {
+        supabase.removeChannel(codeAssignmentChannel);
       }
       if (globalTeamChannel) {
         supabase.removeChannel(globalTeamChannel);

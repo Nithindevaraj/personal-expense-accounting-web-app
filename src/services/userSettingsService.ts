@@ -5,6 +5,7 @@ import {
   type TeamMember,
 } from '../types';
 import {
+  buildIndividualUserCode,
   getStoredAccounts,
   getStoredExpenseCategories,
   getStoredIncomeCategories,
@@ -159,10 +160,25 @@ export async function getAccountsFromSupabase(): Promise<Account[]> {
         const ownerTeams = Array.isArray(row.team_members) ? (row.team_members as TeamMember[]) : [];
         const ownerAccounts = Array.isArray(row.accounts) ? (row.accounts as Account[]) : [];
 
-        // Check if any team member entry matches the current user
-        const memberships = ownerTeams.filter(
-          (m) => m.userId === user.id || (m.userLink && m.userLink.includes(user.id))
-        );
+        const currentCode = buildIndividualUserCode(user.id);
+        const strippedCurrentCode = currentCode.replace(/[^0-9]/g, '');
+
+        // Check if any team member entry matches the current user via ID, code, or link
+        const memberships = ownerTeams.filter((m) => {
+          const mUserId = (m.userId || '').trim();
+          const mUserLink = (m.userLink || '').trim();
+          const strippedMUser = mUserId.replace(/[^0-9]/g, '');
+          const strippedMLink = mUserLink.replace(/[^0-9]/g, '');
+
+          return (
+            mUserId === user.id ||
+            mUserId === currentCode ||
+            (strippedMUser.length === 16 && strippedMUser === strippedCurrentCode) ||
+            mUserLink === currentCode ||
+            (strippedMLink.length === 16 && strippedMLink === strippedCurrentCode) ||
+            mUserLink.includes(user.id)
+          );
+        });
 
         for (const membership of memberships) {
           const matchingCompany = ownerAccounts.find((a) => a.id === membership.accountId);
