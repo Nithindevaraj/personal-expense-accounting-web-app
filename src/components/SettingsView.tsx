@@ -33,7 +33,6 @@ import {
   saveStoredExpenseCategories,
   saveStoredIncomeCategories,
 } from '../utils/storage';
-import { useAuth } from '../context/AuthContext';
 import {
   exportTransactionsToPDF,
   parseCSVToTransactions,
@@ -96,7 +95,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onAddTeamMember,
   onDeleteTeamMember,
 }) => {
-  const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
 
