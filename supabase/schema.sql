@@ -68,6 +68,26 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS user_code TEXT;
+
+-- Pre-migration patch: Ensure company_id and other essential columns exist on any pre-existing tables
+ALTER TABLE IF EXISTS public.company_members ADD COLUMN IF NOT EXISTS company_id TEXT;
+ALTER TABLE IF EXISTS public.company_members ADD COLUMN IF NOT EXISTS user_id UUID;
+ALTER TABLE IF EXISTS public.company_members ADD COLUMN IF NOT EXISTS member_code TEXT;
+ALTER TABLE IF EXISTS public.company_members ADD COLUMN IF NOT EXISTS name TEXT DEFAULT 'Team Member';
+ALTER TABLE IF EXISTS public.company_members ADD COLUMN IF NOT EXISTS designation TEXT DEFAULT 'Member';
+ALTER TABLE IF EXISTS public.company_members ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'spender';
+
+ALTER TABLE IF EXISTS public.projects ADD COLUMN IF NOT EXISTS company_id TEXT;
+ALTER TABLE IF EXISTS public.projects ADD COLUMN IF NOT EXISTS creator_id UUID;
+
+ALTER TABLE IF EXISTS public.expenses ADD COLUMN IF NOT EXISTS company_id TEXT;
+ALTER TABLE IF EXISTS public.expenses ADD COLUMN IF NOT EXISTS user_id UUID;
+
+ALTER TABLE IF EXISTS public.project_members ADD COLUMN IF NOT EXISTS company_id TEXT;
+ALTER TABLE IF EXISTS public.project_members ADD COLUMN IF NOT EXISTS user_id UUID;
+
+ALTER TABLE IF EXISTS public.company_divisions ADD COLUMN IF NOT EXISTS company_id TEXT;
 
 -- ==============================================================================
 -- 3. USER LOGIN AUDIT LOG (Records each login event with User Name & 16-digit code)
