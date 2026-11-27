@@ -85,8 +85,21 @@ export async function getProjectsFromSupabase(accountId: string = 'default'): Pr
     return localProjects;
   }
 
+  const localById = new Map(getStoredProjects(accountId).map((p) => [p.id, p]));
   const mapped = rows
-    .map(mapRowToProject)
+    .map((row) => {
+      const proj = mapRowToProject(row);
+      const localProj = localById.get(proj.id);
+      if (localProj) {
+        if (!('division' in row)) {
+          proj.division = localProj.division ?? null;
+        }
+        if (!('team_members' in row)) {
+          proj.teamMembers = localProj.teamMembers;
+        }
+      }
+      return proj;
+    })
     .sort((a, b) => {
       if (isGeneralProject(a) && !isGeneralProject(b)) return -1;
       if (!isGeneralProject(a) && isGeneralProject(b)) return 1;
