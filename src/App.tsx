@@ -336,6 +336,26 @@ export const App: React.FC = () => {
             });
           }
         })
+        .on('broadcast', { event: 'company-removed' }, (payload: { payload?: { companyId?: string } }) => {
+          const removedCompanyId = payload?.payload?.companyId;
+          if (removedCompanyId) {
+            setAccounts((prevAccounts) => {
+              const nextAccounts = prevAccounts.filter((a) => a.id !== removedCompanyId);
+              saveStoredAccounts(nextAccounts);
+              void saveAccountsToSupabase(nextAccounts);
+              return nextAccounts;
+            });
+            // If the user was currently viewing that removed company, switch back to their primary account
+            if (activeAccountId === removedCompanyId) {
+              setAccounts((prevAccounts) => {
+                const remaining = prevAccounts.filter((a) => a.id !== removedCompanyId);
+                const nextActive = remaining[0]?.id || 'default';
+                handleSwitchAccount(nextActive);
+                return remaining;
+              });
+            }
+          }
+        })
         .subscribe();
 
       channel = supabase
@@ -961,6 +981,8 @@ export const App: React.FC = () => {
   };
 
   const handleDeleteTeamMember = (id: string) => {
+    const memberToDelete = teamMembers.find((m) => m.id === id);
+
     setTeamMembers((prev) => {
       const updated = prev.filter((m) => m.id !== id);
       saveStoredTeamMembers(updated);
@@ -986,6 +1008,29 @@ export const App: React.FC = () => {
             });
         }
       });
+
+      // Immediately notify the removed member so this company is removed from their account list
+      if (memberToDelete?.userId) {
+        const targetUserId = memberToDelete.userId;
+        const memberChannel = supabase.channel(`company-assignments-${targetUserId}`);
+        memberChannel.subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            void memberChannel
+              .send({
+                type: 'broadcast',
+                event: 'company-removed',
+                payload: {
+                  companyId: activeAccountId,
+                },
+              })
+              .finally(() => {
+                setTimeout(() => {
+                  supabase.removeChannel(memberChannel);
+                }, 2000);
+              });
+          }
+        });
+      }
     }
   };
 
