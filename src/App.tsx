@@ -1178,7 +1178,7 @@ export const App: React.FC = () => {
 
   // Post-login Company Onboarding: Create a Company (Admin) or Become a member of existing company
   if (!isDataLoading && !onboardingDone && !accounts.some((a) => a.ownerId === currentUserId)) {
-    const individualUserLink = buildIndividualUserLink(
+    const individualUserCode = buildIndividualUserLink(
       currentUserId,
       user?.user_metadata?.full_name || userProfile.name
     );
@@ -1186,7 +1186,7 @@ export const App: React.FC = () => {
     return (
       <CompanyOnboardingView
         userName={user?.user_metadata?.full_name || userProfile.name}
-        userLink={individualUserLink}
+        userCode={individualUserCode}
         onCreateCompany={(companyName) => {
           try {
             localStorage.setItem(`company_onboarding_done_${currentUserId}`, 'true');

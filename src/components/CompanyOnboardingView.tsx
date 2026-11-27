@@ -3,14 +3,14 @@ import { Building2, ArrowRight, ShieldCheck, Users, Copy, Check, Loader2 } from 
 
 interface CompanyOnboardingViewProps {
   userName?: string;
-  userLink: string;
+  userCode: string;
   onCreateCompany: (companyName: string) => void;
   onCheckMembership: () => Promise<boolean>;
 }
 
 export const CompanyOnboardingView: React.FC<CompanyOnboardingViewProps> = ({
   userName,
-  userLink,
+  userCode,
   onCreateCompany,
   onCheckMembership,
 }) => {
@@ -27,13 +27,13 @@ export const CompanyOnboardingView: React.FC<CompanyOnboardingViewProps> = ({
 
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(userLink);
+      await navigator.clipboard.writeText(userCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch {
       // Fallback manual copy
       const input = document.createElement('textarea');
-      input.value = userLink;
+      input.value = userCode;
       document.body.appendChild(input);
       input.select();
       document.execCommand('copy');
@@ -137,26 +137,26 @@ export const CompanyOnboardingView: React.FC<CompanyOnboardingViewProps> = ({
           </div>
 
           <p className="text-[11px] text-slate-600 leading-relaxed">
-            Share your <strong className="text-slate-800">Individual User Link</strong> below with your company administrator. Once they paste this link in <strong className="text-slate-800">Teams management</strong>, you will automatically enter their company workspace.
+            Share your <strong className="text-slate-800">16-Digit Individual User Code</strong> below with your company administrator. Once they enter this code in <strong className="text-slate-800">Teams management</strong>, you will automatically enter their company workspace.
           </p>
 
-          {/* Individual User Link Box */}
+          {/* Individual User Code Box */}
           <div className="space-y-1.5">
             <label className="text-[11px] font-bold text-slate-700 block">
-              Your Individual User Link
+              Your 16-Digit Individual User Code
             </label>
             <div className="flex items-center gap-2">
               <input
                 type="text"
                 readOnly
-                value={userLink}
-                className="w-full px-2.5 py-2 text-xs font-mono bg-white border border-slate-300 rounded-xl text-slate-600 focus:outline-hidden select-all"
+                value={userCode}
+                className="w-full px-3 py-2 text-sm font-mono font-bold tracking-wider bg-white border border-slate-300 rounded-xl text-indigo-700 focus:outline-hidden select-all text-center"
               />
               <button
                 type="button"
                 onClick={handleCopyLink}
-                className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shrink-0 transition-colors cursor-pointer"
-                title="Copy Individual User Link"
+                className="inline-flex items-center gap-1 px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shrink-0 transition-colors cursor-pointer"
+                title="Copy 16-Digit Code"
               >
                 {copied ? (
                   <>
@@ -166,7 +166,7 @@ export const CompanyOnboardingView: React.FC<CompanyOnboardingViewProps> = ({
                 ) : (
                   <>
                     <Copy className="w-3.5 h-3.5" />
-                    <span>Copy Link</span>
+                    <span>Copy Code</span>
                   </>
                 )}
               </button>
@@ -177,7 +177,7 @@ export const CompanyOnboardingView: React.FC<CompanyOnboardingViewProps> = ({
           <div className="p-3 rounded-xl bg-emerald-50/80 border border-emerald-200/90 flex items-center gap-2.5 text-xs text-emerald-900">
             <Loader2 className="w-4 h-4 animate-spin text-emerald-600 shrink-0" />
             <p className="text-[11px] leading-relaxed">
-              Waiting for a company administrator to add your link. This screen will automatically refresh into the workspace as soon as you are added.
+              Waiting for a company administrator to add your 16-digit code. This screen will automatically refresh into the workspace as soon as you are added.
             </p>
           </div>
         </div>

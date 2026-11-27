@@ -36,17 +36,25 @@ export function getOrCreateLocalUserId(): string {
   }
 }
 
-export function buildIndividualUserLink(userId: string, name?: string): string {
-  const base =
-    typeof window !== 'undefined'
-      ? `${window.location.origin}${window.location.pathname}`
-      : 'https://nithindevaraj.github.io/personal-expense-accounting-web-app/';
-  const params = new URLSearchParams();
-  params.set('member', userId);
-  if (name && name.trim()) {
-    params.set('name', name.trim());
+export function buildIndividualUserCode(userId: string): string {
+  if (!userId) return '0000-0000-0000-0000';
+  const clean = userId.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+
+  let hash1 = 0;
+  let hash2 = 0;
+  for (let i = 0; i < clean.length; i++) {
+    const char = clean.charCodeAt(i);
+    hash1 = (hash1 * 31 + char) % 100000000;
+    hash2 = (hash2 * 37 + char) % 100000000;
   }
-  return `${base}?${params.toString()}`;
+  const part1 = String(Math.abs(hash1)).padStart(8, '4');
+  const part2 = String(Math.abs(hash2)).padStart(8, '7');
+  const raw16 = (part1 + part2).slice(0, 16);
+  return `${raw16.slice(0, 4)}-${raw16.slice(4, 8)}-${raw16.slice(8, 12)}-${raw16.slice(12, 16)}`;
+}
+
+export function buildIndividualUserLink(userId: string, _name?: string): string {
+  return buildIndividualUserCode(userId);
 }
 
 export function parseIndividualUserLink(rawInput: string): {
@@ -60,14 +68,14 @@ export function parseIndividualUserLink(rawInput: string): {
     const memberId = url.searchParams.get('member')?.trim();
     const memberName = url.searchParams.get('name')?.trim() || undefined;
     if (memberId) {
-      return { userId: memberId, name: memberName, userLink: trimmed };
+      return { userId: memberId, name: memberName, userLink: buildIndividualUserCode(memberId) };
     }
   } catch {
-    // Not a full URL; treat as raw user ID
+    // Not a full URL; treat as 16-digit code or raw user ID
   }
   return {
     userId: trimmed,
-    userLink: buildIndividualUserLink(trimmed),
+    userLink: buildIndividualUserCode(trimmed),
   };
 }
 

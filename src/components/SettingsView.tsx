@@ -1141,14 +1141,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <div className="sm:col-span-2">
                 <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                  Individual User Link or User ID *
+                  16-Digit Individual User Code or User ID *
                 </label>
                 <input
                   type="text"
                   required
                   value={memberLinkInput}
                   onChange={(e) => handleMemberLinkChange(e.target.value)}
-                  placeholder="Paste user's individual link or User ID"
+                  placeholder="Enter 16-digit code (e.g. 4821-3920-1923-8472) or User ID"
                   className="w-full px-3 py-2 text-base sm:text-xs bg-white border border-slate-200 rounded-xl font-medium text-slate-800"
                 />
               </div>
