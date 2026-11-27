@@ -139,7 +139,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   aria-expanded={isAccountMenuOpen}
                   aria-haspopup="menu"
                   className="flex items-center gap-2 px-2 py-1 -ml-1 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer min-w-0 group"
-                  title="Switch or manage companies / divisions"
+                  title="Switch or manage companies"
                 >
                   <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 shrink-0">
                     <Wallet className="w-4 h-4" />
@@ -154,7 +154,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {isAccountMenuOpen && (
                   <div className="absolute left-0 top-full mt-2 w-72 bg-white rounded-2xl border border-slate-200 shadow-2xl p-2.5 z-50 animate-fade-in">
                     <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      Companies / Divisions
+                      Companies
                     </div>
 
                     <div className="space-y-1 max-h-56 overflow-y-auto my-1">
