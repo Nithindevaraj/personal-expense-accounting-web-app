@@ -18,7 +18,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
-import type { Project, Transaction, TransactionType } from '../types';
+import type { Project, TeamMember, Transaction, TransactionType } from '../types';
 import { formatINR, formatDate, transactionsToCSV } from '../utils/formatters';
 import { canModifyTransaction } from '../utils/projectPermissions';
 
@@ -29,6 +29,8 @@ interface TransactionsViewProps {
   expenseCategories: string[];
   initialFilter?: { tag?: string; subTag?: string; type?: TransactionType };
   currentUserId?: string;
+  teamMembers?: TeamMember[];
+  activeAccountId?: string;
   onOpenNewTransaction: () => void;
   onEditTransaction: (t: Transaction) => void;
   onDeleteTransaction: (id: string) => void;
@@ -44,6 +46,8 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   expenseCategories,
   initialFilter,
   currentUserId,
+  teamMembers,
+  activeAccountId,
   onOpenNewTransaction,
   onEditTransaction,
   onDeleteTransaction,
@@ -646,7 +650,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
 
                     {/* Action buttons with touch targets */}
                     <div className="flex items-center gap-1">
-                      {canModifyTransaction(t, projects, currentUserId) && (
+                      {canModifyTransaction(t, projects, currentUserId, teamMembers, activeAccountId) && (
                         <button
                           type="button"
                           onClick={() => onEditTransaction(t)}
@@ -668,7 +672,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                         <Copy className="w-4 h-4" />
                       </button>
 
-                      {canModifyTransaction(t, projects, currentUserId) && (
+                      {canModifyTransaction(t, projects, currentUserId, teamMembers, activeAccountId) && (
                         <button
                           type="button"
                           onClick={() => onDeleteTransaction(t.id)}
@@ -912,7 +916,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                         {/* Actions */}
                         <td className="p-3 text-center whitespace-nowrap">
                           <div className="flex items-center justify-center gap-1">
-                            {canModifyTransaction(t, projects, currentUserId) && (
+                            {canModifyTransaction(t, projects, currentUserId, teamMembers, activeAccountId) && (
                               <button
                                 type="button"
                                 onClick={() => onEditTransaction(t)}
@@ -932,7 +936,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                               <Copy className="w-3.5 h-3.5" />
                             </button>
 
-                            {canModifyTransaction(t, projects, currentUserId) && (
+                            {canModifyTransaction(t, projects, currentUserId, teamMembers, activeAccountId) && (
                               <button
                                 type="button"
                                 onClick={() => onDeleteTransaction(t.id)}

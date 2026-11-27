@@ -307,9 +307,26 @@ export const App: React.FC = () => {
     window.addEventListener('focus', handleVisibilityOrFocus);
     document.addEventListener('visibilitychange', handleVisibilityOrFocus);
 
-    // Subscribe to Supabase Realtime changes for cross-device updates
+    // Subscribe to Supabase Realtime changes for cross-device updates and company assignments
     let channel: ReturnType<typeof supabase.channel> | null = null;
+    let assignmentChannel: ReturnType<typeof supabase.channel> | null = null;
     if (isSupabaseConfigured) {
+      assignmentChannel = supabase
+        .channel(`company-assignments-${user.id}`)
+        .on('broadcast', { event: 'company-added' }, (payload: { payload?: { company?: Account } }) => {
+          const addedCompany = payload?.payload?.company;
+          if (addedCompany && addedCompany.id) {
+            setAccounts((prevAccounts) => {
+              if (prevAccounts.some((a) => a.id === addedCompany.id)) return prevAccounts;
+              const nextAccounts = [...prevAccounts, addedCompany];
+              saveStoredAccounts(nextAccounts);
+              void saveAccountsToSupabase(nextAccounts);
+              return nextAccounts;
+            });
+          }
+        })
+        .subscribe();
+
       channel = supabase
         .channel(`sync-${user.id}`)
         .on(
@@ -409,6 +426,9 @@ export const App: React.FC = () => {
       document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
       if (channel) {
         supabase.removeChannel(channel);
+      }
+      if (assignmentChannel) {
+        supabase.removeChannel(assignmentChannel);
       }
     };
   }, [user, activeAccountId]);
@@ -849,6 +869,32 @@ export const App: React.FC = () => {
       void saveTeamMembersToSupabase(updated);
       return updated;
     });
+
+    // Notify member via Realtime broadcast so this company is immediately added to their account list
+    if (isSupabaseConfigured && activeAccount) {
+      const targetUserId = member.userId;
+      if (targetUserId) {
+        const memberChannel = supabase.channel(`company-assignments-${targetUserId}`);
+        memberChannel.subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            void memberChannel
+              .send({
+                type: 'broadcast',
+                event: 'company-added',
+                payload: {
+                  company: activeAccount,
+                  memberRole: member.role || 'spender',
+                },
+              })
+              .finally(() => {
+                setTimeout(() => {
+                  supabase.removeChannel(memberChannel);
+                }, 2000);
+              });
+          }
+        });
+      }
+    }
   };
 
   const handleEditTeamMember = (updatedMember: TeamMember) => {
@@ -1059,6 +1105,8 @@ export const App: React.FC = () => {
             expenseCategories={expenseCategories}
             initialFilter={txLedgerFilter}
             currentUserId={currentUserId}
+            teamMembers={teamMembers}
+            activeAccountId={activeAccountId}
             onOpenNewTransaction={() => {
               setEditingTransaction(null);
               setIsTxModalOpen(true);

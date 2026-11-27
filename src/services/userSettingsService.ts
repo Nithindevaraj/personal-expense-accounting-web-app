@@ -142,8 +142,20 @@ export async function getAccountsFromSupabase(): Promise<Account[]> {
     return [];
   }
 
-  saveStoredAccounts(cloudAccounts);
-  return cloudAccounts;
+  // Merge cloud accounts with any assigned accounts already stored locally to ensure zero loss of memberships
+  const mergedMap = new Map<string, Account>();
+  for (const acc of cloudAccounts) {
+    mergedMap.set(acc.id, acc);
+  }
+  for (const acc of localAccounts) {
+    if (!mergedMap.has(acc.id) && !(acc.id === 'default' && acc.name === 'Demo company')) {
+      mergedMap.set(acc.id, acc);
+    }
+  }
+  const finalAccounts = Array.from(mergedMap.values());
+
+  saveStoredAccounts(finalAccounts);
+  return finalAccounts;
 }
 
 export async function saveAccountsToSupabase(accounts: Account[]): Promise<void> {
