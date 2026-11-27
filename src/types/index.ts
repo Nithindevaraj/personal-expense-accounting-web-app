@@ -12,7 +12,18 @@ export interface Transaction {
   description: string;
   attachments?: string[]; // Data URLs or filenames
   notes?: string;
+  createdByUserId?: string;
   createdAt: number;
+}
+
+export type ProjectAccessRole = 'admin' | 'spender';
+
+export interface ProjectTeamAssignment {
+  memberId: string;
+  userId: string;
+  name: string;
+  designation: string;
+  role: ProjectAccessRole;
 }
 
 export interface Project {
@@ -24,6 +35,8 @@ export interface Project {
   color?: string;
   completed?: boolean;
   completedAt?: number | null;
+  ownerId?: string;
+  teamMembers?: ProjectTeamAssignment[];
   createdAt: number;
 }
 

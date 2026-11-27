@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import type { Project, Transaction, TransactionType } from '../types';
 import { formatINR, formatDate, transactionsToCSV } from '../utils/formatters';
+import { canModifyTransaction } from '../utils/projectPermissions';
 
 interface TransactionsViewProps {
   transactions: Transaction[];
@@ -27,6 +28,7 @@ interface TransactionsViewProps {
   incomeCategories: string[];
   expenseCategories: string[];
   initialFilter?: { tag?: string; subTag?: string; type?: TransactionType };
+  currentUserId?: string;
   onOpenNewTransaction: () => void;
   onEditTransaction: (t: Transaction) => void;
   onDeleteTransaction: (id: string) => void;
@@ -41,6 +43,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   incomeCategories,
   expenseCategories,
   initialFilter,
+  currentUserId,
   onOpenNewTransaction,
   onEditTransaction,
   onDeleteTransaction,
@@ -643,15 +646,17 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
 
                     {/* Action buttons with touch targets */}
                     <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => onEditTransaction(t)}
-                        className="p-2 rounded-xl bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 shadow-2xs transition-colors cursor-pointer"
-                        title="Edit entry"
-                        aria-label="Edit entry"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
+                      {canModifyTransaction(t, projects, currentUserId) && (
+                        <button
+                          type="button"
+                          onClick={() => onEditTransaction(t)}
+                          className="p-2 rounded-xl bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 shadow-2xs transition-colors cursor-pointer"
+                          title="Edit entry"
+                          aria-label="Edit entry"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                      )}
 
                       <button
                         type="button"
@@ -663,15 +668,17 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                         <Copy className="w-4 h-4" />
                       </button>
 
-                      <button
-                        type="button"
-                        onClick={() => onDeleteTransaction(t.id)}
-                        className="p-2 rounded-xl bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 border border-slate-200 shadow-2xs transition-colors cursor-pointer"
-                        title="Delete entry"
-                        aria-label="Delete entry"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {canModifyTransaction(t, projects, currentUserId) && (
+                        <button
+                          type="button"
+                          onClick={() => onDeleteTransaction(t.id)}
+                          className="p-2 rounded-xl bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 border border-slate-200 shadow-2xs transition-colors cursor-pointer"
+                          title="Delete entry"
+                          aria-label="Delete entry"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -892,14 +899,16 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                         {/* Actions */}
                         <td className="p-3 text-center whitespace-nowrap">
                           <div className="flex items-center justify-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => onEditTransaction(t)}
-                              className="p-1 rounded-lg hover:bg-white text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
-                              title="Edit"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
+                            {canModifyTransaction(t, projects, currentUserId) && (
+                              <button
+                                type="button"
+                                onClick={() => onEditTransaction(t)}
+                                className="p-1 rounded-lg hover:bg-white text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
+                                title="Edit"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
 
                             <button
                               type="button"
@@ -910,14 +919,16 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                               <Copy className="w-3.5 h-3.5" />
                             </button>
 
-                            <button
-                              type="button"
-                              onClick={() => onDeleteTransaction(t.id)}
-                              className="p-1 rounded-lg hover:bg-rose-100 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            {canModifyTransaction(t, projects, currentUserId) && (
+                              <button
+                                type="button"
+                                onClick={() => onDeleteTransaction(t.id)}
+                                className="p-1 rounded-lg hover:bg-rose-100 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

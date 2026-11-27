@@ -36,6 +36,7 @@ export function mapRowToTransaction(row: DbExpenseRow): Transaction {
     description: row.description || '',
     attachments: row.attachments || [],
     notes: row.notes || '',
+    createdByUserId: row.user_id || undefined,
     createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
   };
 }

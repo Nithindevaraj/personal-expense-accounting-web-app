@@ -19,6 +19,7 @@ import {
   type UserProfile,
   DEFAULT_USER_PROFILE,
   getActiveAccountId,
+  getOrCreateLocalUserId,
   getStoredAccounts,
   getStoredExpenseCategories,
   getStoredIncomeCategories,
@@ -39,6 +40,7 @@ import {
   saveUserProfile,
 } from './utils/storage';
 import { applyTheme } from './utils/theme';
+import { canModifyTransaction } from './utils/projectPermissions';
 import { Navbar, type ActiveTab } from './components/Navbar';
 import { DashboardView } from './components/DashboardView';
 import { TransactionsView } from './components/TransactionsView';
@@ -380,9 +382,11 @@ export const App: React.FC = () => {
     } else {
       // 1. Optimistic UI insert with temporary ID
       const tempId = `tx-temp-${Date.now()}`;
+      const currentUserId = user?.id || getOrCreateLocalUserId();
       const tempTx: Transaction = {
         ...txData,
         id: tempId,
+        createdByUserId: currentUserId,
         createdAt: Date.now(),
       };
       markTxInFlight(tempId);
@@ -410,7 +414,12 @@ export const App: React.FC = () => {
     }
   };
 
+  const currentUserId = user?.id || getOrCreateLocalUserId();
+
   const handleDeleteTransaction = async (id: string) => {
+    const target = transactions.find((t) => t.id === id);
+    if (target && !canModifyTransaction(target, projects, currentUserId)) return;
+
     // 1. Optimistic UI update
     const updated = transactions.filter((t) => t.id !== id);
     setTransactions(updated);
@@ -425,15 +434,21 @@ export const App: React.FC = () => {
   };
 
   const handleBatchDeleteTransactions = async (ids: string[]) => {
+    const allowedIds = ids.filter((id) => {
+      const target = transactions.find((t) => t.id === id);
+      return !target || canModifyTransaction(target, projects, currentUserId);
+    });
+    if (allowedIds.length === 0) return;
+
     // 1. Optimistic UI update
-    const idSet = new Set(ids);
+    const idSet = new Set(allowedIds);
     const updated = transactions.filter((t) => !idSet.has(t.id));
     setTransactions(updated);
     saveStoredTransactions(updated, activeAccountId);
 
     // 2. Persist to Supabase
     try {
-      await batchDeleteExpenses(ids);
+      await batchDeleteExpenses(allowedIds);
     } catch (err) {
       console.error('Error batch deleting expenses from Supabase:', err);
     }
@@ -452,6 +467,7 @@ export const App: React.FC = () => {
   const handleAddProject = (projectData: Omit<Project, 'id' | 'createdAt'>) => {
     const newProj: Project = {
       ...projectData,
+      ownerId: projectData.ownerId || currentUserId,
       id: `proj-${Date.now()}`,
       createdAt: Date.now(),
     };
@@ -550,6 +566,7 @@ export const App: React.FC = () => {
   };
 
   const handleOpenEdit = (t: Transaction) => {
+    if (!canModifyTransaction(t, projects, currentUserId)) return;
     setEditingTransaction(t);
     setIsTxModalOpen(true);
   };
@@ -841,6 +858,7 @@ export const App: React.FC = () => {
             incomeCategories={incomeCategories}
             expenseCategories={expenseCategories}
             initialFilter={txLedgerFilter}
+            currentUserId={currentUserId}
             onOpenNewTransaction={() => {
               setEditingTransaction(null);
               setIsTxModalOpen(true);
@@ -857,6 +875,8 @@ export const App: React.FC = () => {
           <ProjectsView
             projects={projects}
             transactions={transactions}
+            teamMembers={teamMembers}
+            currentUserId={currentUserId}
             onAddProject={handleAddProject}
             onEditProject={handleEditProject}
             onDeleteProject={handleDeleteProject}

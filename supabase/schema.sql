@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS public.projects (
     color TEXT DEFAULT '#3b82f6',
     completed BOOLEAN NOT NULL DEFAULT false,
     completed_at TIMESTAMPTZ,
+    team_members JSONB DEFAULT '[]'::JSONB,
     account_id TEXT NOT NULL DEFAULT 'default',
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );

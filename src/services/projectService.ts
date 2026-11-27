@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import type { Project } from '../types';
+import type { Project, ProjectTeamAssignment } from '../types';
 import { getStoredProjects, saveStoredProjects } from '../utils/storage';
 
 interface DbProjectRow {
@@ -12,6 +12,7 @@ interface DbProjectRow {
   color: string | null;
   completed: boolean;
   completed_at: string | null;
+  team_members?: ProjectTeamAssignment[] | null;
   created_at: string;
 }
 
@@ -25,12 +26,18 @@ function mapRowToProject(row: DbProjectRow): Project {
     color: row.color || '#3b82f6',
     completed: Boolean(row.completed),
     completedAt: row.completed_at ? new Date(row.completed_at).getTime() : null,
+    ownerId: row.user_id || undefined,
+    teamMembers: Array.isArray(row.team_members) ? row.team_members : undefined,
     createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
   };
 }
 
-function mapProjectToPayload(project: Project, accountId: string = 'default') {
-  return {
+function mapProjectToPayload(
+  project: Project,
+  accountId: string = 'default',
+  includeTeamMembers: boolean = true
+) {
+  const base = {
     id: project.id,
     parent_id: project.parentId || null,
     name: project.name,
@@ -40,6 +47,12 @@ function mapProjectToPayload(project: Project, accountId: string = 'default') {
     completed: Boolean(project.completed),
     completed_at: project.completedAt ? new Date(project.completedAt).toISOString() : null,
     account_id: accountId,
+  };
+
+  if (!includeTeamMembers) return base;
+  return {
+    ...base,
+    team_members: project.teamMembers || [],
   };
 }
 
@@ -81,9 +94,18 @@ export async function upsertProjectToSupabase(
 
   const { error } = await supabase
     .from('projects')
-    .upsert([mapProjectToPayload(project, accountId)], { onConflict: 'id' });
+    .upsert([mapProjectToPayload(project, accountId, true)], { onConflict: 'id' });
 
   if (error) {
+    if (error.message.includes('team_members')) {
+      const { error: fallbackError } = await supabase
+        .from('projects')
+        .upsert([mapProjectToPayload(project, accountId, false)], { onConflict: 'id' });
+      if (fallbackError) {
+        console.error('Failed to upsert project in Supabase:', fallbackError.message);
+      }
+      return;
+    }
     console.error('Failed to upsert project in Supabase:', error.message);
   }
 }
