@@ -806,6 +806,9 @@ export const App: React.FC = () => {
     const target = accounts.find((a) => a.id === id);
     if (!isUserCompanyAdmin(target, currentUserId, teamMembers)) return;
 
+    // Identify all members belonging to this company before removing it
+    const companyTeamMembers = teamMembers.filter((m) => m.accountId === id);
+
     const nextAccounts = accounts.filter((a) => a.id !== id);
     setAccounts(nextAccounts);
     saveStoredAccounts(nextAccounts);
@@ -818,15 +821,49 @@ export const App: React.FC = () => {
     setTeamMembers(remainingTeams);
     saveStoredTeamMembers(remainingTeams);
 
+    // Completely purge from Supabase backend across all relational and user tables
     if (isSupabaseConfigured) {
       try {
         await saveAccountsToSupabase(nextAccounts);
         await saveRecurringToSupabase(remainingRecurring);
         await saveTeamMembersToSupabase(remainingTeams);
+
         if (user) {
-          await supabase.from('expenses').delete().eq('account_id', id);
-          await supabase.from('projects').delete().eq('account_id', id);
+          // Delete all company expenses (both account_id and company_id columns supported)
+          await supabase.from('expenses').delete().or(`account_id.eq.${id},company_id.eq.${id}`);
+          // Delete all company projects and sub-projects
+          await supabase.from('projects').delete().or(`account_id.eq.${id},company_id.eq.${id}`);
+          // Delete company divisions
+          await supabase.from('company_divisions').delete().eq('company_id', id);
+          // Delete company members
+          await supabase.from('company_members').delete().eq('company_id', id);
+          // Delete project members
+          await supabase.from('project_members').delete().eq('company_id', id);
+          // Delete the company root record
+          await supabase.from('companies').delete().eq('id', id);
         }
+
+        // Notify all team members in real-time that this company has been deleted
+        companyTeamMembers.forEach((tm) => {
+          if (tm.userId && tm.userId !== currentUserId) {
+            const memberChannel = supabase.channel(`company-assignments-${tm.userId}`);
+            memberChannel.subscribe((status) => {
+              if (status === 'SUBSCRIBED') {
+                void memberChannel
+                  .send({
+                    type: 'broadcast',
+                    event: 'company-removed',
+                    payload: { companyId: id },
+                  })
+                  .finally(() => {
+                    setTimeout(() => {
+                      supabase.removeChannel(memberChannel);
+                    }, 2000);
+                  });
+              }
+            });
+          }
+        });
       } catch (err) {
         console.error('Error deleting company data from Supabase:', err);
       }
