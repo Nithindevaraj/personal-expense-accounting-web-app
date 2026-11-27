@@ -1153,21 +1153,30 @@ export const App: React.FC = () => {
           setOnboardingDone(true);
           handleAddAccount(companyName);
         }}
-        onJoinAsMember={() => {
+        onJoinAsMember={async () => {
+          // Actively fetch and verify accounts against Supabase
+          const verified = await getAccountsFromSupabase();
+          // User is a valid member if they have at least 1 verified company (owned or member-assigned)
+          const validCompanies = verified.filter(
+            (a) => a.id !== DEFAULT_ACCOUNT_ID && !(a.id === 'default' && a.name === 'Demo company')
+          );
+
+          if (validCompanies.length === 0) {
+            // Not a part of any existing company!
+            return false;
+          }
+
           try {
             localStorage.setItem(`company_onboarding_done_${currentUserId}`, 'true');
           } catch {
             // ignore storage quota errors
           }
           setOnboardingDone(true);
-          // Immediately verify against Supabase so if user was removed, company is purged
-          void getAccountsFromSupabase().then((verified) => {
-            setAccounts(verified);
-            if (!verified.some((a) => a.id === activeAccountId)) {
-              const fallback = verified[0]?.id || DEFAULT_ACCOUNT_ID;
-              handleSwitchAccount(fallback);
-            }
-          });
+          setAccounts(validCompanies);
+          if (!validCompanies.some((a) => a.id === activeAccountId)) {
+            handleSwitchAccount(validCompanies[0].id);
+          }
+          return true;
         }}
       />
     );
