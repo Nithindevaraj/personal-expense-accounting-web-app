@@ -644,6 +644,15 @@ export const App: React.FC = () => {
     void saveAccountsToSupabase(nextAccounts);
   };
 
+  const handleUpdateAccount = (updatedAccount: Account) => {
+    const nextAccounts = accounts.map((a) =>
+      a.id === updatedAccount.id ? updatedAccount : a
+    );
+    setAccounts(nextAccounts);
+    saveStoredAccounts(nextAccounts);
+    void saveAccountsToSupabase(nextAccounts);
+  };
+
   const handleDeleteAccount = (id: string) => {
     if (id === DEFAULT_ACCOUNT_ID) return;
     const nextAccounts = accounts.filter((a) => a.id !== id);
@@ -912,6 +921,8 @@ export const App: React.FC = () => {
             incomeCategories={incomeCategories}
             expenseCategories={expenseCategories}
             userProfile={userProfile}
+            activeAccount={accounts.find((a) => a.id === activeAccountId) || accounts[0]}
+            onUpdateAccount={handleUpdateAccount}
             onUpdateIncomeCategories={(cats) => {
               setIncomeCategories(cats);
               saveStoredIncomeCategories(cats);

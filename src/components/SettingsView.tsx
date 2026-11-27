@@ -21,6 +21,7 @@ import {
   Building2,
 } from 'lucide-react';
 import type {
+  Account,
   Project,
   RecurringTransaction,
   TeamMember,
@@ -46,6 +47,8 @@ interface SettingsViewProps {
   incomeCategories: string[];
   expenseCategories: string[];
   userProfile: UserProfile;
+  activeAccount?: Account;
+  onUpdateAccount?: (account: Account) => void;
   onUpdateIncomeCategories: (cats: string[]) => void;
   onUpdateExpenseCategories: (cats: string[]) => void;
   onUpdateUserProfile: (profile: UserProfile) => void;
@@ -83,6 +86,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   incomeCategories,
   expenseCategories,
   userProfile,
+  activeAccount,
+  onUpdateAccount,
   onUpdateIncomeCategories,
   onUpdateExpenseCategories,
   onUpdateUserProfile,
@@ -104,6 +109,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [notification, setNotification] = useState<string | null>(null);
   const [showRecurringPage, setShowRecurringPage] = useState(false);
   const [showTeamsPage, setShowTeamsPage] = useState(false);
+  const [showCompanyProfilePage, setShowCompanyProfilePage] = useState(false);
+  const [companyName, setCompanyName] = useState(activeAccount?.name || '');
+  const [companyEmail, setCompanyEmail] = useState(activeAccount?.email || '');
+  const [companyPhone, setCompanyPhone] = useState(activeAccount?.phone || '');
+  const [companyTaxId, setCompanyTaxId] = useState(activeAccount?.taxId || '');
+  const [companyAddress, setCompanyAddress] = useState(activeAccount?.address || '');
+  const [newDivision, setNewDivision] = useState('');
   const [memberLinkInput, setMemberLinkInput] = useState('');
   const [memberNameInput, setMemberNameInput] = useState('');
   const [memberDesignationInput, setMemberDesignationInput] = useState('');
@@ -171,6 +183,53 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setRecDescription('');
     setRecNotes('');
     showNotification(`Recurring ${recType.toLowerCase()} added for ${formatDayOrdinal(parsedDay)} of every month`);
+  };
+
+  const handleOpenCompanyProfile = () => {
+    setCompanyName(activeAccount?.name || '');
+    setCompanyEmail(activeAccount?.email || '');
+    setCompanyPhone(activeAccount?.phone || '');
+    setCompanyTaxId(activeAccount?.taxId || '');
+    setCompanyAddress(activeAccount?.address || '');
+    setNewDivision('');
+    setShowCompanyProfilePage(true);
+  };
+
+  const handleSaveCompanyProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeAccount || !onUpdateAccount) return;
+    onUpdateAccount({
+      ...activeAccount,
+      name: companyName.trim() || activeAccount.name,
+      email: companyEmail.trim(),
+      phone: companyPhone.trim(),
+      taxId: companyTaxId.trim(),
+      address: companyAddress.trim(),
+    });
+    showNotification('Company profile updated');
+  };
+
+  const handleAddDivision = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = newDivision.trim();
+    if (!trimmed || !activeAccount || !onUpdateAccount) return;
+    const existing = activeAccount.divisions || [];
+    if (existing.includes(trimmed)) return;
+    onUpdateAccount({
+      ...activeAccount,
+      divisions: [...existing, trimmed],
+    });
+    setNewDivision('');
+    showNotification(`Added division: ${trimmed}`);
+  };
+
+  const handleRemoveDivision = (division: string) => {
+    if (!activeAccount || !onUpdateAccount) return;
+    const existing = activeAccount.divisions || [];
+    onUpdateAccount({
+      ...activeAccount,
+      divisions: existing.filter((d) => d !== division),
+    });
   };
 
   const handleMemberLinkChange = (value: string) => {
@@ -352,7 +411,153 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       )}
 
-      {showRecurringPage ? (
+      {showCompanyProfilePage ? (
+        /* Company Profile & Divisions Full Page */
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs space-y-5">
+          <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowCompanyProfilePage(false)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer transition-colors"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back</span>
+              </button>
+              <Building2 className="w-5 h-5 text-indigo-600 shrink-0" />
+              <h2 className="text-sm sm:text-base font-bold text-slate-900">
+                Company Profile &amp; Divisions
+              </h2>
+            </div>
+          </div>
+
+          {/* Company Profile Form */}
+          <form onSubmit={handleSaveCompanyProfile} className="space-y-3 bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80">
+            <h3 className="text-xs font-bold text-slate-800">Company Profile</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                  Company Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  placeholder="e.g. Acme Builders Pvt Ltd"
+                  className="w-full px-3 py-2 text-base sm:text-xs bg-white border border-slate-200 rounded-xl font-medium text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                  Tax / GST ID
+                </label>
+                <input
+                  type="text"
+                  value={companyTaxId}
+                  onChange={(e) => setCompanyTaxId(e.target.value)}
+                  placeholder="e.g. 29ABCDE1234F1Z5"
+                  className="w-full px-3 py-2 text-base sm:text-xs bg-white border border-slate-200 rounded-xl font-medium text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={companyEmail}
+                  onChange={(e) => setCompanyEmail(e.target.value)}
+                  placeholder="accounts@company.com"
+                  className="w-full px-3 py-2 text-base sm:text-xs bg-white border border-slate-200 rounded-xl font-medium text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                  Phone
+                </label>
+                <input
+                  type="text"
+                  value={companyPhone}
+                  onChange={(e) => setCompanyPhone(e.target.value)}
+                  placeholder="+91 98765 43210"
+                  className="w-full px-3 py-2 text-base sm:text-xs bg-white border border-slate-200 rounded-xl font-medium text-slate-800"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                  Address
+                </label>
+                <textarea
+                  rows={2}
+                  value={companyAddress}
+                  onChange={(e) => setCompanyAddress(e.target.value)}
+                  placeholder="Company office address"
+                  className="w-full px-3 py-2 text-base sm:text-xs bg-white border border-slate-200 rounded-xl font-medium text-slate-800"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
+              >
+                Save Company Profile
+              </button>
+            </div>
+          </form>
+
+          {/* Divisions Section */}
+          <div className="space-y-3 bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80">
+            <h3 className="text-xs font-bold text-slate-800">Divisions</h3>
+            <form onSubmit={handleAddDivision} className="flex gap-2">
+              <input
+                type="text"
+                value={newDivision}
+                onChange={(e) => setNewDivision(e.target.value)}
+                placeholder="Add division (e.g. Construction, Operations)..."
+                className="grow px-3 py-2 text-base sm:text-xs bg-white border border-slate-200 rounded-xl focus:outline-hidden font-medium"
+              />
+              <button
+                type="submit"
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0"
+              >
+                Add
+              </button>
+            </form>
+
+            {(activeAccount?.divisions || []).length === 0 ? (
+              <p className="text-[11px] text-slate-500">
+                No divisions added yet for this company.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {(activeAccount?.divisions || []).map((div) => (
+                  <span
+                    key={div}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-50 text-indigo-800 border border-indigo-200 text-xs font-semibold"
+                  >
+                    <span>{div}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveDivision(div)}
+                      className="p-0.5 hover:text-rose-600 cursor-pointer text-slate-400"
+                      aria-label={`Remove division ${div}`}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : showRecurringPage ? (
         /* Recurring Transactions Full Page */
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
           <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
@@ -753,6 +958,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
             {openSections.company && (
               <div className="space-y-2.5 pt-4 mt-3 border-t border-slate-100">
+                {/* Company Profile & Divisions Navigation Card */}
+                <button
+                  type="button"
+                  onClick={handleOpenCompanyProfile}
+                  className="w-full bg-slate-50/70 hover:bg-slate-100/80 p-3.5 rounded-xl border border-slate-200/80 flex items-center justify-between gap-2 text-left transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-blue-600 shrink-0" />
+                    <span className="text-xs sm:text-sm font-bold text-slate-900">
+                      Company Profile &amp; Divisions
+                    </span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                </button>
+
                 {/* Recurring Transactions Navigation Card */}
                 <button
                   type="button"
