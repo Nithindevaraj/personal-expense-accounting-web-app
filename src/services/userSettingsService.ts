@@ -136,6 +136,33 @@ export async function getAccountsFromSupabase(): Promise<Account[]> {
     console.error('Error fetching created companies from Supabase:', err);
   }
 
+  // 1b. Load company divisions from public.company_divisions
+  try {
+    const { data: divRows, error: divErr } = await supabase
+      .from('company_divisions')
+      .select('company_id, name');
+
+    if (!divErr && Array.isArray(divRows) && divRows.length > 0) {
+      const divisionsByCompany = new Map<string, string[]>();
+      for (const row of divRows) {
+        if (!row.company_id || !row.name) continue;
+        const list = divisionsByCompany.get(row.company_id) || [];
+        if (!list.includes(row.name)) {
+          list.push(row.name);
+          divisionsByCompany.set(row.company_id, list);
+        }
+      }
+      for (const [companyId, divs] of divisionsByCompany.entries()) {
+        const existing = verifiedMap.get(companyId);
+        if (existing) {
+          existing.divisions = divs;
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error fetching company divisions from Supabase:', err);
+  }
+
   // 2. Discover participating company memberships from public.company_members
   try {
     const { data: memberRows, error: memberErr } = await supabase
@@ -183,6 +210,8 @@ export async function getAccountsFromSupabase(): Promise<Account[]> {
     for (const acc of ownAccounts) {
       if (!verifiedMap.has(acc.id) && (!acc.ownerId || acc.ownerId === user.id)) {
         verifiedMap.set(acc.id, acc);
+      } else if (verifiedMap.has(acc.id) && Array.isArray(acc.divisions) && (!verifiedMap.get(acc.id)!.divisions || verifiedMap.get(acc.id)!.divisions!.length === 0)) {
+        verifiedMap.get(acc.id)!.divisions = acc.divisions;
       }
     }
   } catch {
@@ -196,6 +225,8 @@ export async function getAccountsFromSupabase(): Promise<Account[]> {
       if (!loc.ownerId || loc.ownerId === user.id) {
         verifiedMap.set(loc.id, loc);
       }
+    } else if (verifiedMap.has(loc.id) && Array.isArray(loc.divisions) && (!verifiedMap.get(loc.id)!.divisions || verifiedMap.get(loc.id)!.divisions!.length === 0)) {
+      verifiedMap.get(loc.id)!.divisions = loc.divisions;
     }
   }
 
@@ -241,6 +272,37 @@ export async function saveAccountsToSupabase(accounts: Account[]): Promise<void>
             updated_at: new Date().toISOString(),
           },
         ], { onConflict: 'id' });
+
+        // Sync divisions to public.company_divisions
+        if (Array.isArray(acc.divisions)) {
+          // Clean removed divisions & upsert active ones
+          const { data: existingDivs } = await supabase
+            .from('company_divisions')
+            .select('id, name')
+            .eq('company_id', acc.id);
+
+          const existingNames = new Set((existingDivs || []).map((d) => d.name));
+          const currentDivs = new Set(acc.divisions);
+
+          // Delete divisions no longer in account
+          for (const d of (existingDivs || [])) {
+            if (!currentDivs.has(d.name)) {
+              await supabase.from('company_divisions').delete().eq('id', d.id);
+            }
+          }
+
+          // Insert newly added divisions
+          for (const divName of acc.divisions) {
+            if (!existingNames.has(divName)) {
+              await supabase.from('company_divisions').insert([
+                {
+                  company_id: acc.id,
+                  name: divName,
+                },
+              ]);
+            }
+          }
+        }
       }
     }
   } catch {

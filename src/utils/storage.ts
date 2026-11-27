@@ -115,12 +115,38 @@ export function saveStoredRecurringTransactions(recurring: RecurringTransaction[
   memoryCache.recurring = recurring;
 }
 
+const ACCOUNTS_STORAGE_KEY = 'accounting_stored_accounts_cache';
+
 export function getStoredAccounts(): Account[] {
+  if (memoryCache.accounts && memoryCache.accounts.length > 0) {
+    return memoryCache.accounts;
+  }
+  try {
+    const saved = localStorage.getItem(ACCOUNTS_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        memoryCache.accounts = parsed;
+        return parsed;
+      }
+    }
+  } catch {
+    // ignore localStorage errors in private browsing
+  }
   return memoryCache.accounts;
 }
 
 export function saveStoredAccounts(accounts: Account[]): void {
   memoryCache.accounts = accounts;
+  try {
+    if (accounts && accounts.length > 0) {
+      localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(accounts));
+    } else {
+      localStorage.removeItem(ACCOUNTS_STORAGE_KEY);
+    }
+  } catch {
+    // ignore
+  }
 }
 
 const ACTIVE_ACCOUNT_KEY = 'accounting_active_account_id';
