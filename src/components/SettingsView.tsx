@@ -128,19 +128,42 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     maintenance: false,
   });
 
-  const groupedRecurring = useMemo(() => {
-    const groups = new Map<string, RecurringTransaction[]>();
+  const groupedRecurringByDivision = useMemo(() => {
+    const divisionMap = new Map<string, Map<string, RecurringTransaction[]>>();
     for (const item of recurringTransactions) {
-      const key = item.tag || 'General Transactions';
-      const existing = groups.get(key);
+      const projectName = item.tag || 'General Transactions';
+      const matchingProj = projects.find((p) => !p.parentId && p.name === projectName);
+      const divisionName = matchingProj?.division || 'General / Unassigned';
+
+      if (!divisionMap.has(divisionName)) {
+        divisionMap.set(divisionName, new Map());
+      }
+      const projMap = divisionMap.get(divisionName)!;
+      const existing = projMap.get(projectName);
       if (existing) {
         existing.push(item);
       } else {
-        groups.set(key, [item]);
+        projMap.set(projectName, [item]);
       }
     }
-    return Array.from(groups.entries());
-  }, [recurringTransactions]);
+
+    const configuredDivs = activeAccount?.divisions || [];
+    const divKeys = Array.from(divisionMap.keys()).sort((a, b) => {
+      if (a === 'General / Unassigned') return 1;
+      if (b === 'General / Unassigned') return -1;
+      const idxA = configuredDivs.indexOf(a);
+      const idxB = configuredDivs.indexOf(b);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return a.localeCompare(b);
+    });
+
+    return divKeys.map((divisionName) => ({
+      divisionName,
+      projects: Array.from(divisionMap.get(divisionName)!.entries()),
+    }));
+  }, [recurringTransactions, projects, activeAccount?.divisions]);
 
   const topProjects = projects.filter((p) => !p.parentId);
   const [recType, setRecType] = useState<TransactionType>('Expense');
@@ -759,80 +782,96 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
             </form>
 
-            {groupedRecurring.length > 0 && (
-              <div className="space-y-3">
-                {groupedRecurring.map(([projectName, items]) => (
+            {groupedRecurringByDivision.length > 0 && (
+              <div className="space-y-4">
+                {groupedRecurringByDivision.map(({ divisionName, projects: divProjects }) => (
                   <div
-                    key={projectName}
-                    className="rounded-xl border border-slate-200/90 bg-slate-50/60 overflow-hidden"
+                    key={divisionName}
+                    className="rounded-2xl border border-indigo-200/80 bg-indigo-50/30 p-3 space-y-2.5"
                   >
-                    <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 bg-slate-100/80 border-b border-slate-200/80">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <FolderKanban className="w-4 h-4 text-indigo-600 shrink-0" />
-                        <h3 className="text-xs font-bold text-slate-900 truncate">
-                          {projectName}
-                        </h3>
-                      </div>
-                      <span className="px-2 py-0.5 rounded-full bg-white border border-slate-200 text-[10px] font-bold text-slate-600 shrink-0">
-                        {items.length}
-                      </span>
+                    <div className="flex items-center gap-2 px-1">
+                      <Building2 className="w-4 h-4 text-indigo-600 shrink-0" />
+                      <h3 className="text-xs sm:text-sm font-bold text-indigo-900 truncate">
+                        {divisionName}
+                      </h3>
                     </div>
 
-                    <div className="divide-y divide-slate-200/70">
-                      {items.map((item) => (
+                    <div className="space-y-2.5">
+                      {divProjects.map(([projectName, items]) => (
                         <div
-                          key={item.id}
-                          className="flex items-center justify-between gap-3 p-3 bg-white/80 text-xs"
+                          key={`${divisionName}-${projectName}`}
+                          className="rounded-xl border border-slate-200/90 bg-slate-50/60 overflow-hidden"
                         >
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span
-                                className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
-                                  item.type === 'Income'
-                                    ? 'bg-emerald-100 text-emerald-800'
-                                    : 'bg-rose-100 text-rose-800'
-                                }`}
-                              >
-                                {item.type}
-                              </span>
-                              <span className="font-bold text-slate-900">
-                                {formatDayOrdinal(item.dayOfMonth)} of every month
-                              </span>
-                              {item.subTag && (
-                                <>
-                                  <span className="text-slate-400">•</span>
-                                  <span className="font-semibold text-indigo-700">
-                                    {item.subTag}
-                                  </span>
-                                </>
-                              )}
-                              <span className="text-slate-400">•</span>
-                              <span className="text-slate-600">{item.category}</span>
+                          <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 bg-slate-100/80 border-b border-slate-200/80">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <FolderKanban className="w-4 h-4 text-indigo-600 shrink-0" />
+                              <h4 className="text-xs font-bold text-slate-900 truncate">
+                                {projectName}
+                              </h4>
                             </div>
-                            {(item.description || item.notes) && (
-                              <p className="text-[11px] text-slate-500 mt-1 truncate">
-                                {item.description}
-                                {item.description && item.notes ? ' — ' : ''}
-                                {item.notes}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2.5 shrink-0">
-                            <span
-                              className={`font-bold ${
-                                item.type === 'Income' ? 'text-emerald-700' : 'text-rose-700'
-                              }`}
-                            >
-                              {formatINR(item.amount)}
+                            <span className="px-2 py-0.5 rounded-full bg-white border border-slate-200 text-[10px] font-bold text-slate-600 shrink-0">
+                              {items.length}
                             </span>
-                            <button
-                              type="button"
-                              onClick={() => onDeleteRecurring(item.id)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
-                              title="Delete recurring transaction"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                          </div>
+
+                          <div className="divide-y divide-slate-200/70">
+                            {items.map((item) => (
+                              <div
+                                key={item.id}
+                                className="flex items-center justify-between gap-3 p-3 bg-white/80 text-xs"
+                              >
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span
+                                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                        item.type === 'Income'
+                                          ? 'bg-emerald-100 text-emerald-800'
+                                          : 'bg-rose-100 text-rose-800'
+                                      }`}
+                                    >
+                                      {item.type}
+                                    </span>
+                                    <span className="font-bold text-slate-900">
+                                      {formatDayOrdinal(item.dayOfMonth)} of every month
+                                    </span>
+                                    {item.subTag && (
+                                      <>
+                                        <span className="text-slate-400">•</span>
+                                        <span className="font-semibold text-indigo-700">
+                                          {item.subTag}
+                                        </span>
+                                      </>
+                                    )}
+                                    <span className="text-slate-400">•</span>
+                                    <span className="text-slate-600">{item.category}</span>
+                                  </div>
+                                  {(item.description || item.notes) && (
+                                    <p className="text-[11px] text-slate-500 mt-1 truncate">
+                                      {item.description}
+                                      {item.description && item.notes ? ' — ' : ''}
+                                      {item.notes}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2.5 shrink-0">
+                                  <span
+                                    className={`font-bold ${
+                                      item.type === 'Income' ? 'text-emerald-700' : 'text-rose-700'
+                                    }`}
+                                  >
+                                    {formatINR(item.amount)}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => onDeleteRecurring(item.id)}
+                                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+                                    title="Delete recurring transaction"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       ))}
