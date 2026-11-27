@@ -1099,7 +1099,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </button>
               <Users className="w-5 h-5 text-emerald-600 shrink-0" />
               <h2 className="text-sm sm:text-base font-bold text-slate-900">
-                Teams
+                Teams management
               </h2>
             </div>
             <span className="text-[11px] font-semibold text-slate-500">
@@ -1350,7 +1350,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-emerald-600 shrink-0" />
                     <span className="text-xs sm:text-sm font-bold text-slate-900">
-                      Teams
+                      Teams management
                     </span>
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />

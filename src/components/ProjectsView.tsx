@@ -1363,7 +1363,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
 
                   {teamMembers.length === 0 ? (
                     <p className="text-[11px] text-slate-500">
-                      No team members available yet. Add members in Settings → Teams first.
+                      No team members available yet. Add members in Settings → Teams management first.
                     </p>
                   ) : (
                     <div className="flex flex-col sm:flex-row gap-2">
