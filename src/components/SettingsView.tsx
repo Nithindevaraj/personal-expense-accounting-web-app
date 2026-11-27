@@ -990,7 +990,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <span className="font-bold text-rose-800">Clear All Data:</span> Removes all Transactions and Recurring Transactions.
             </p>
             <p>
-              <span className="font-bold text-amber-800">Reset:</span> Resets Accounts / Companies, Teams, Income Categories, and Expense Categories.
+              <span className="font-bold text-amber-800">Reset:</span> Resets Accounts / Companies, Teams, Projects, Income Categories, and Expense Categories.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
@@ -1017,11 +1017,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             onClick={() => {
               if (
                 window.confirm(
-                  'WARNING: This will reset Accounts / Companies, Teams, Income Categories, and Expense Categories back to their default state. This cannot be undone.'
+                  'WARNING: This will reset Accounts / Companies, Teams, Projects, Income Categories, and Expense Categories back to their default state. This cannot be undone.'
                 )
               ) {
                 onResetToDefaults();
-                showNotification('Accounts, teams, and categories reset');
+                showNotification('Accounts, teams, projects, and categories reset');
               }
             }}
             className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-semibold transition-all cursor-pointer"

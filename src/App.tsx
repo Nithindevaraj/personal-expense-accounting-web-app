@@ -13,6 +13,7 @@ import {
   DEFAULT_ACCOUNTS,
   DEFAULT_EXPENSE_CATEGORIES,
   DEFAULT_INCOME_CATEGORIES,
+  createDefaultProjectsForAccount,
   isGeneralProject,
 } from './types';
 import {
@@ -760,12 +761,16 @@ export const App: React.FC = () => {
   }, [recurringTransactions, activeAccountId, isDataLoading]);
 
   const handleResetToDefaults = async () => {
+    const prevProjectIds = projects.map((p) => p.id);
+    const defaultProjects = createDefaultProjectsForAccount(DEFAULT_ACCOUNT_ID);
+
     setAccounts(DEFAULT_ACCOUNTS);
     saveStoredAccounts(DEFAULT_ACCOUNTS);
     setActiveAccountId(DEFAULT_ACCOUNT_ID);
     saveActiveAccountId(DEFAULT_ACCOUNT_ID);
     setTransactions(getStoredTransactions(DEFAULT_ACCOUNT_ID));
-    setProjects(getStoredProjects(DEFAULT_ACCOUNT_ID));
+    setProjects(defaultProjects);
+    saveStoredProjects(defaultProjects, DEFAULT_ACCOUNT_ID);
     setTxLedgerFilter({});
 
     setTeamMembers([]);
@@ -778,6 +783,12 @@ export const App: React.FC = () => {
 
     if (user && isSupabaseConfigured) {
       try {
+        for (const pid of prevProjectIds) {
+          await deleteProjectFromSupabase(pid);
+        }
+        for (const proj of defaultProjects) {
+          await upsertProjectToSupabase(proj, DEFAULT_ACCOUNT_ID);
+        }
         await saveAccountsToSupabase(DEFAULT_ACCOUNTS);
         await saveTeamMembersToSupabase([]);
         await saveCategoriesToSupabase({
