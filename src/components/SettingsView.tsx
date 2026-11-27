@@ -110,6 +110,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [showRecurringPage, setShowRecurringPage] = useState(false);
   const [showTeamsPage, setShowTeamsPage] = useState(false);
   const [showCompanyProfilePage, setShowCompanyProfilePage] = useState(false);
+  const [showCompanyDivisionsPage, setShowCompanyDivisionsPage] = useState(false);
   const [companyName, setCompanyName] = useState(activeAccount?.name || '');
   const [companyEmail, setCompanyEmail] = useState(activeAccount?.email || '');
   const [companyPhone, setCompanyPhone] = useState(activeAccount?.phone || '');
@@ -412,7 +413,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       )}
 
       {showCompanyProfilePage ? (
-        /* Company Profile & Divisions Full Page */
+        /* Company Profile Full Page */
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs space-y-5">
           <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
             <div className="flex items-center gap-2.5">
@@ -424,16 +425,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <ArrowLeft className="w-3.5 h-3.5" />
                 <span>Back</span>
               </button>
-              <Building2 className="w-5 h-5 text-indigo-600 shrink-0" />
+              <Building2 className="w-5 h-5 text-blue-600 shrink-0" />
               <h2 className="text-sm sm:text-base font-bold text-slate-900">
-                Company Profile &amp; Divisions
+                Company Profile
               </h2>
             </div>
           </div>
 
           {/* Company Profile Form */}
           <form onSubmit={handleSaveCompanyProfile} className="space-y-3 bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80">
-            <h3 className="text-xs font-bold text-slate-800">Company Profile</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-600 mb-1">
@@ -511,10 +511,28 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </button>
             </div>
           </form>
+        </div>
+      ) : showCompanyDivisionsPage ? (
+        /* Company Divisions Full Page */
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs space-y-5">
+          <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowCompanyDivisionsPage(false)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer transition-colors"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back</span>
+              </button>
+              <FolderKanban className="w-5 h-5 text-indigo-600 shrink-0" />
+              <h2 className="text-sm sm:text-base font-bold text-slate-900">
+                Company Divisions
+              </h2>
+            </div>
+          </div>
 
-          {/* Divisions Section */}
           <div className="space-y-3 bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80">
-            <h3 className="text-xs font-bold text-slate-800">Divisions</h3>
             <form onSubmit={handleAddDivision} className="flex gap-2">
               <input
                 type="text"
@@ -958,7 +976,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
             {openSections.company && (
               <div className="space-y-2.5 pt-4 mt-3 border-t border-slate-100">
-                {/* Company Profile & Divisions Navigation Card */}
+                {/* Company Profile Navigation Card */}
                 <button
                   type="button"
                   onClick={handleOpenCompanyProfile}
@@ -967,7 +985,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <div className="flex items-center gap-2">
                     <Building2 className="w-4 h-4 text-blue-600 shrink-0" />
                     <span className="text-xs sm:text-sm font-bold text-slate-900">
-                      Company Profile &amp; Divisions
+                      Company Profile
+                    </span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                </button>
+
+                {/* Company Divisions Navigation Card */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewDivision('');
+                    setShowCompanyDivisionsPage(true);
+                  }}
+                  className="w-full bg-slate-50/70 hover:bg-slate-100/80 p-3.5 rounded-xl border border-slate-200/80 flex items-center justify-between gap-2 text-left transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <FolderKanban className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span className="text-xs sm:text-sm font-bold text-slate-900">
+                      Company Divisions
                     </span>
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
