@@ -670,16 +670,40 @@ export const App: React.FC = () => {
     void saveAccountsToSupabase(nextAccounts);
   };
 
-  const handleDeleteAccount = (id: string) => {
+  const handleDeleteAccount = async (id: string) => {
     if (id === DEFAULT_ACCOUNT_ID) return;
     const target = accounts.find((a) => a.id === id);
     if (!isUserCompanyAdmin(target, currentUserId)) return;
+
     const nextAccounts = accounts.filter((a) => a.id !== id);
     setAccounts(nextAccounts);
     saveStoredAccounts(nextAccounts);
-    void saveAccountsToSupabase(nextAccounts);
+
+    const remainingRecurring = recurringTransactions.filter((r) => r.accountId !== id);
+    setRecurringTransactions(remainingRecurring);
+    saveStoredRecurringTransactions(remainingRecurring);
+
+    const remainingTeams = teamMembers.filter((m) => m.accountId !== id);
+    setTeamMembers(remainingTeams);
+    saveStoredTeamMembers(remainingTeams);
+
     if (activeAccountId === id) {
-      handleSwitchAccount(DEFAULT_ACCOUNT_ID);
+      const nextActiveId = nextAccounts[0]?.id || DEFAULT_ACCOUNT_ID;
+      handleSwitchAccount(nextActiveId);
+    }
+
+    if (isSupabaseConfigured) {
+      try {
+        await saveAccountsToSupabase(nextAccounts);
+        await saveRecurringToSupabase(remainingRecurring);
+        await saveTeamMembersToSupabase(remainingTeams);
+        if (user) {
+          await supabase.from('expenses').delete().eq('account_id', id);
+          await supabase.from('projects').delete().eq('account_id', id);
+        }
+      } catch (err) {
+        console.error('Error deleting company data from Supabase:', err);
+      }
     }
   };
 
