@@ -10,14 +10,13 @@ import type {
 } from './types';
 import {
   DEFAULT_ACCOUNT_ID,
+  DEFAULT_ACCOUNTS,
   DEFAULT_EXPENSE_CATEGORIES,
   DEFAULT_INCOME_CATEGORIES,
-  createDefaultProjectsForAccount,
   isGeneralProject,
 } from './types';
 import {
   type UserProfile,
-  DEFAULT_USER_PROFILE,
   getActiveAccountId,
   getOrCreateLocalUserId,
   getStoredAccounts,
@@ -28,7 +27,6 @@ import {
   getStoredTeamMembers,
   getStoredTransactions,
   getUserProfile,
-  resetToDefaults,
   saveActiveAccountId,
   saveStoredAccounts,
   saveStoredExpenseCategories,
@@ -39,7 +37,6 @@ import {
   saveStoredTransactions,
   saveUserProfile,
 } from './utils/storage';
-import { applyTheme } from './utils/theme';
 import { canModifyTransaction } from './utils/projectPermissions';
 import { Navbar, type ActiveTab } from './components/Navbar';
 import { DashboardView } from './components/DashboardView';
@@ -594,9 +591,27 @@ export const App: React.FC = () => {
     saveStoredTransactions(finalTransactions);
   };
 
-  const handleClearAllData = () => {
+  const handleClearAllData = async () => {
+    const prevTxIds = transactions.map((t) => t.id);
     setTransactions([]);
     saveStoredTransactions([], activeAccountId);
+
+    const remainingRecurring = recurringTransactions.filter(
+      (r) => r.accountId !== activeAccountId
+    );
+    setRecurringTransactions(remainingRecurring);
+    saveStoredRecurringTransactions(remainingRecurring);
+
+    if (user && isSupabaseConfigured) {
+      try {
+        if (prevTxIds.length > 0) {
+          await batchDeleteExpenses(prevTxIds);
+        }
+        await saveRecurringToSupabase(remainingRecurring);
+      } catch (err) {
+        console.error('Error clearing data from Supabase:', err);
+      }
+    }
   };
 
   const handleSwitchAccount = (accountId: string) => {
@@ -745,44 +760,32 @@ export const App: React.FC = () => {
   }, [recurringTransactions, activeAccountId, isDataLoading]);
 
   const handleResetToDefaults = async () => {
-    const prevTxIds = transactions.map((t) => t.id);
-    const prevProjectIds = projects.map((p) => p.id);
-    const defaultProjects = createDefaultProjectsForAccount(activeAccountId);
+    setAccounts(DEFAULT_ACCOUNTS);
+    saveStoredAccounts(DEFAULT_ACCOUNTS);
+    setActiveAccountId(DEFAULT_ACCOUNT_ID);
+    saveActiveAccountId(DEFAULT_ACCOUNT_ID);
+    setTransactions(getStoredTransactions(DEFAULT_ACCOUNT_ID));
+    setProjects(getStoredProjects(DEFAULT_ACCOUNT_ID));
+    setTxLedgerFilter({});
 
-    resetToDefaults(activeAccountId);
-    applyTheme('system');
-    setTransactions([]);
-    setProjects(defaultProjects);
+    setTeamMembers([]);
+    saveStoredTeamMembers([]);
+
     setIncomeCategories(DEFAULT_INCOME_CATEGORIES);
+    saveStoredIncomeCategories(DEFAULT_INCOME_CATEGORIES);
     setExpenseCategories(DEFAULT_EXPENSE_CATEGORIES);
-    setUserProfile(
-      user
-        ? {
-            ...DEFAULT_USER_PROFILE,
-            name: user.user_metadata?.full_name || DEFAULT_USER_PROFILE.name,
-            email: user.email || DEFAULT_USER_PROFILE.email,
-            avatar: user.user_metadata?.avatar_url,
-          }
-        : DEFAULT_USER_PROFILE
-    );
+    saveStoredExpenseCategories(DEFAULT_EXPENSE_CATEGORIES);
 
     if (user && isSupabaseConfigured) {
       try {
-        if (prevTxIds.length > 0) {
-          await batchDeleteExpenses(prevTxIds);
-        }
-        for (const pid of prevProjectIds) {
-          await deleteProjectFromSupabase(pid);
-        }
-        for (const proj of defaultProjects) {
-          await upsertProjectToSupabase(proj, activeAccountId);
-        }
+        await saveAccountsToSupabase(DEFAULT_ACCOUNTS);
+        await saveTeamMembersToSupabase([]);
         await saveCategoriesToSupabase({
           incomeCategories: DEFAULT_INCOME_CATEGORIES,
           expenseCategories: DEFAULT_EXPENSE_CATEGORIES,
         });
       } catch (err) {
-        console.error('Error resetting cloud data to defaults:', err);
+        console.error('Error resetting settings in Supabase:', err);
       }
     }
   };

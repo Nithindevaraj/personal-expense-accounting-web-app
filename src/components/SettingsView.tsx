@@ -984,17 +984,26 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </button>
 
         {openSections.maintenance && (
-        <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-100 mt-3">
+        <div className="pt-4 border-t border-slate-100 mt-3 space-y-3">
+          <div className="text-[11px] text-slate-600 bg-rose-50/50 border border-rose-100 rounded-xl p-2.5 space-y-1">
+            <p>
+              <span className="font-bold text-rose-800">Clear All Data:</span> Removes all Transactions and Recurring Transactions.
+            </p>
+            <p>
+              <span className="font-bold text-amber-800">Reset:</span> Resets Accounts / Companies, Teams, Income Categories, and Expense Categories.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3">
           <button
             type="button"
             onClick={() => {
               if (
                 window.confirm(
-                  'DANGER: Are you sure you want to permanently clear all local records? This cannot be undone.'
+                  'WARNING: This will permanently delete all Transactions and Recurring Transactions for this account. This cannot be undone.'
                 )
               ) {
                 onClearAllData();
-                showNotification('All records cleared');
+                showNotification('Transactions and recurring transactions cleared');
               }
             }}
             className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 text-xs font-semibold transition-all cursor-pointer"
@@ -1008,11 +1017,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             onClick={() => {
               if (
                 window.confirm(
-                  'Reset the app (transactions, projects, categories, and theme) back to its initial default state? This cannot be undone.'
+                  'WARNING: This will reset Accounts / Companies, Teams, Income Categories, and Expense Categories back to their default state. This cannot be undone.'
                 )
               ) {
                 onResetToDefaults();
-                showNotification('App reset to initial state');
+                showNotification('Accounts, teams, and categories reset');
               }
             }}
             className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-semibold transition-all cursor-pointer"
@@ -1020,6 +1029,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <RotateCcw className="w-4 h-4 shrink-0" />
             <span>Reset</span>
           </button>
+          </div>
         </div>
         )}
       </div>
