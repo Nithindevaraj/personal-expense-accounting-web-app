@@ -132,7 +132,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [confirmDeleteCompany, setConfirmDeleteCompany] = useState(false);
   const [memberLinkInput, setMemberLinkInput] = useState('');
   const [memberNameInput, setMemberNameInput] = useState('');
-  const [memberDesignationInput, setMemberDesignationInput] = useState('');
   const [memberRoleInput, setMemberRoleInput] = useState<'admin' | 'spender'>('spender');
   const [openSections, setOpenSections] = useState({
     company: false,
@@ -356,19 +355,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   const handleCreateTeamMember = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!memberLinkInput.trim() || !memberDesignationInput.trim()) return;
+    if (!memberLinkInput.trim()) return;
     const parsed = parseIndividualUserLink(memberLinkInput);
     if (!parsed.userId) return;
     onAddTeamMember({
       userId: parsed.userId,
       userLink: parsed.userLink,
       name: memberNameInput.trim() || parsed.name || 'Team Member',
-      designation: memberDesignationInput.trim(),
+      designation: '',
       role: memberRoleInput,
     });
     setMemberLinkInput('');
     setMemberNameInput('');
-    setMemberDesignationInput('');
     setMemberRoleInput('spender');
     showNotification('Team member added');
   };
@@ -1105,7 +1103,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </h2>
             </div>
             <span className="text-[11px] font-semibold text-slate-500">
-              Members &amp; Designations
+              Members &amp; Access Roles
             </span>
           </div>
 
@@ -1143,20 +1141,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   value={memberNameInput}
                   onChange={(e) => setMemberNameInput(e.target.value)}
                   placeholder="e.g. Ravi Kumar (auto-filled from link)"
-                  className="w-full px-3 py-2 text-base sm:text-xs bg-white border border-slate-200 rounded-xl font-medium text-slate-800"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                  Designation *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={memberDesignationInput}
-                  onChange={(e) => setMemberDesignationInput(e.target.value)}
-                  placeholder="e.g. Accountant, Site Manager, Partner"
                   className="w-full px-3 py-2 text-base sm:text-xs bg-white border border-slate-200 rounded-xl font-medium text-slate-800"
                 />
               </div>
@@ -1222,9 +1206,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
             return (
               <div className="space-y-2">
-                {displayMembers.map((member) => {
+                {displayMembers.map((member, index) => {
                   const isCompanyCreator = activeAccount?.ownerId && member.userId === activeAccount.ownerId;
                   const effectiveRole = isCompanyCreator ? 'admin' : (member.role || 'spender');
+                  const idNumber = index + 1;
 
                   return (
                     <div
@@ -1234,11 +1219,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-bold text-slate-900">{member.name}</span>
-                          {member.designation && member.designation !== 'Admin / Owner' && (
-                            <span className="px-2 py-0.5 rounded-full bg-slate-200/80 text-slate-700 text-[10px] font-medium">
-                              {member.designation}
-                            </span>
-                          )}
+                          <span className="px-2 py-0.5 rounded-full bg-slate-200/90 text-slate-700 text-[10px] font-bold font-mono">
+                            id.no: {idNumber}
+                          </span>
                         </div>
                         <p className="text-[11px] font-mono text-slate-500 mt-1 truncate">
                           {member.userLink || member.userId}

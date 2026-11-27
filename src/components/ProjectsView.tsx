@@ -1373,9 +1373,9 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                         className="flex-1 px-2.5 py-2 text-xs bg-white border border-slate-200 rounded-xl font-medium text-slate-700 focus:outline-hidden"
                       >
                         <option value="">Select team member...</option>
-                        {availableTeamMembers.map((member) => (
+                        {availableTeamMembers.map((member, idx) => (
                           <option key={member.id} value={member.id}>
-                            {member.name} ({member.designation})
+                            {member.name} {member.designation ? `(${member.designation})` : `(id.no: ${idx + 1})`}
                           </option>
                         ))}
                       </select>
@@ -1414,9 +1414,11 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                             <p className="text-xs font-bold text-slate-800 truncate">
                               {member.name}
                             </p>
-                            <p className="text-[10px] text-slate-500 truncate">
-                              {member.designation}
-                            </p>
+                            {member.designation && (
+                              <p className="text-[10px] text-slate-500 truncate">
+                                {member.designation}
+                              </p>
+                            )}
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
                             <select
