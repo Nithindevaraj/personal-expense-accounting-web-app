@@ -1094,7 +1094,7 @@ export const App: React.FC = () => {
     return <LoginView />;
   }
 
-  // Post-login Company Onboarding: Create a Company (Admin) or Direct Login
+  // Post-login Company Onboarding: Create a Company (Admin) or Member of existing company
   if (!isDataLoading && !onboardingDone && !accounts.some((a) => a.ownerId === currentUserId)) {
     return (
       <CompanyOnboardingView
@@ -1108,7 +1108,7 @@ export const App: React.FC = () => {
           setOnboardingDone(true);
           handleAddAccount(companyName);
         }}
-        onDirectLogin={() => {
+        onJoinAsMember={() => {
           try {
             localStorage.setItem(`company_onboarding_done_${currentUserId}`, 'true');
           } catch {

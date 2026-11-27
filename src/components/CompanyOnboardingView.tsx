@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
-import { Building2, ArrowRight, ShieldCheck, UserCheck } from 'lucide-react';
+import { Building2, ArrowRight, ShieldCheck, Users } from 'lucide-react';
 
 interface CompanyOnboardingViewProps {
   userName?: string;
   onCreateCompany: (companyName: string) => void;
-  onDirectLogin: () => void;
+  onJoinAsMember: () => void;
 }
 
 export const CompanyOnboardingView: React.FC<CompanyOnboardingViewProps> = ({
   userName,
   onCreateCompany,
-  onDirectLogin,
+  onJoinAsMember,
 }) => {
   const [companyName, setCompanyName] = useState('');
 
@@ -32,7 +32,7 @@ export const CompanyOnboardingView: React.FC<CompanyOnboardingViewProps> = ({
             {userName ? `Welcome, ${userName}` : 'Choose Workspace Mode'}
           </h1>
           <p className="text-xs text-slate-500">
-            Create your own company for full Admin access, or continue with Direct Login.
+            Create your own company for full Admin access, or continue as a member of an existing company.
           </p>
         </div>
 
@@ -73,21 +73,22 @@ export const CompanyOnboardingView: React.FC<CompanyOnboardingViewProps> = ({
           </span>
         </div>
 
-        {/* Option 2: Direct Login */}
+        {/* Option 2: Member of existing company */}
         <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
           <div className="flex items-center gap-2">
-            <UserCheck className="w-4 h-4 text-slate-600 shrink-0" />
-            <h2 className="text-sm font-bold text-slate-900">Direct Login</h2>
+            <Users className="w-4 h-4 text-emerald-600 shrink-0" />
+            <h2 className="text-sm font-bold text-slate-900">Member of existing company</h2>
           </div>
           <p className="text-[11px] text-slate-500 leading-relaxed">
-            Enter without Company Admin access. You can still create a company anytime from the top <span className="font-semibold text-slate-700">Companies</span> menu to gain Admin access for it.
+            Continue as a member. If an administrator has assigned you to their company, your assigned companies and projects will automatically sync.
           </p>
           <button
             type="button"
-            onClick={onDirectLogin}
-            className="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-xs font-bold transition-colors cursor-pointer"
+            onClick={onJoinAsMember}
+            className="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5"
           >
-            Continue with Direct Login
+            <span>Continue as Member</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
