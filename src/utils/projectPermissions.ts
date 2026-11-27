@@ -1,6 +1,18 @@
-import type { Project, ProjectAccessRole, Transaction } from '../types';
+import type { Account, Project, ProjectAccessRole, Transaction } from '../types';
 
 export type EffectiveProjectRole = 'owner' | ProjectAccessRole;
+
+/**
+ * Determine whether the current user is the admin (creator/owner) of a company.
+ * Users who create a company get admin access; direct login users do not.
+ */
+export function isUserCompanyAdmin(
+  account: Account | undefined,
+  currentUserId?: string
+): boolean {
+  if (!account || !currentUserId) return false;
+  return account.ownerId === currentUserId;
+}
 
 /**
  * Determine the current user's effective role on a project.

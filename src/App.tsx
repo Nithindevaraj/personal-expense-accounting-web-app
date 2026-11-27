@@ -38,7 +38,7 @@ import {
   saveStoredTransactions,
   saveUserProfile,
 } from './utils/storage';
-import { canModifyTransaction } from './utils/projectPermissions';
+import { canModifyTransaction, isUserCompanyAdmin } from './utils/projectPermissions';
 import { Navbar, type ActiveTab } from './components/Navbar';
 import { DashboardView } from './components/DashboardView';
 import { TransactionsView } from './components/TransactionsView';
@@ -52,6 +52,7 @@ import { InstallModal } from './components/InstallModal';
 import { InstallBanner } from './components/InstallBanner';
 import { useAuth } from './context/AuthContext';
 import { LoginView } from './components/LoginView';
+import { CompanyOnboardingView } from './components/CompanyOnboardingView';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import {
   getExpenses,
@@ -380,7 +381,6 @@ export const App: React.FC = () => {
     } else {
       // 1. Optimistic UI insert with temporary ID
       const tempId = `tx-temp-${Date.now()}`;
-      const currentUserId = user?.id || getOrCreateLocalUserId();
       const tempTx: Transaction = {
         ...txData,
         id: tempId,
@@ -413,6 +413,15 @@ export const App: React.FC = () => {
   };
 
   const currentUserId = user?.id || getOrCreateLocalUserId();
+  const activeAccount = accounts.find((a) => a.id === activeAccountId) || accounts[0];
+  const isCompanyAdmin = isUserCompanyAdmin(activeAccount, currentUserId);
+  const [onboardingDone, setOnboardingDone] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(`company_onboarding_done_${currentUserId}`) === 'true';
+    } catch {
+      return false;
+    }
+  });
 
   const handleDeleteTransaction = async (id: string) => {
     const target = transactions.find((t) => t.id === id);
@@ -463,6 +472,7 @@ export const App: React.FC = () => {
 
   // Project Handlers
   const handleAddProject = (projectData: Omit<Project, 'id' | 'createdAt'>) => {
+    if (!isCompanyAdmin) return;
     const newProj: Project = {
       ...projectData,
       ownerId: projectData.ownerId || currentUserId,
@@ -478,6 +488,7 @@ export const App: React.FC = () => {
   };
 
   const handleEditProject = (project: Project) => {
+    if (!isCompanyAdmin) return;
     setProjects((prev) => {
       const updated = prev.map((p) => (p.id === project.id ? project : p));
       saveStoredProjects(updated, activeAccountId);
@@ -487,6 +498,7 @@ export const App: React.FC = () => {
   };
 
   const handleDeleteProject = (id: string) => {
+    if (!isCompanyAdmin) return;
     const target = projects.find((p) => p.id === id);
     if (target && isGeneralProject(target)) return;
     if (target) {
@@ -533,6 +545,7 @@ export const App: React.FC = () => {
   };
 
   const handleToggleProjectComplete = (id: string, completed: boolean) => {
+    if (!isCompanyAdmin) return;
     setProjects((prev) => {
       const updated = prev.map((p) => {
         if (p.id !== id || isGeneralProject(p)) return p;
@@ -628,6 +641,7 @@ export const App: React.FC = () => {
     const newAccount: Account = {
       id: `acc-${Date.now()}`,
       name,
+      ownerId: currentUserId,
       createdAt: Date.now(),
     };
     const nextAccounts = [...accounts, newAccount];
@@ -638,6 +652,8 @@ export const App: React.FC = () => {
   };
 
   const handleRenameAccount = (id: string, name: string) => {
+    const target = accounts.find((a) => a.id === id);
+    if (!isUserCompanyAdmin(target, currentUserId)) return;
     const nextAccounts = accounts.map((a) => (a.id === id ? { ...a, name } : a));
     setAccounts(nextAccounts);
     saveStoredAccounts(nextAccounts);
@@ -645,6 +661,7 @@ export const App: React.FC = () => {
   };
 
   const handleUpdateAccount = (updatedAccount: Account) => {
+    if (!isUserCompanyAdmin(updatedAccount, currentUserId)) return;
     const nextAccounts = accounts.map((a) =>
       a.id === updatedAccount.id ? updatedAccount : a
     );
@@ -655,6 +672,8 @@ export const App: React.FC = () => {
 
   const handleDeleteAccount = (id: string) => {
     if (id === DEFAULT_ACCOUNT_ID) return;
+    const target = accounts.find((a) => a.id === id);
+    if (!isUserCompanyAdmin(target, currentUserId)) return;
     const nextAccounts = accounts.filter((a) => a.id !== id);
     setAccounts(nextAccounts);
     saveStoredAccounts(nextAccounts);
@@ -834,6 +853,32 @@ export const App: React.FC = () => {
     return <LoginView />;
   }
 
+  // Post-login Company Onboarding: Create a Company (Admin) or Direct Login
+  if (!isDataLoading && !onboardingDone && !accounts.some((a) => a.ownerId === currentUserId)) {
+    return (
+      <CompanyOnboardingView
+        userName={user?.user_metadata?.full_name || userProfile.name}
+        onCreateCompany={(companyName) => {
+          try {
+            localStorage.setItem(`company_onboarding_done_${currentUserId}`, 'true');
+          } catch {
+            // ignore storage quota errors
+          }
+          setOnboardingDone(true);
+          handleAddAccount(companyName);
+        }}
+        onDirectLogin={() => {
+          try {
+            localStorage.setItem(`company_onboarding_done_${currentUserId}`, 'true');
+          } catch {
+            // ignore storage quota errors
+          }
+          setOnboardingDone(true);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col antialiased">
       {/* Sticky Global Navigation */}
@@ -853,6 +898,7 @@ export const App: React.FC = () => {
         onOpenProfile={() => setIsProfileModalOpen(true)}
         accounts={accounts}
         activeAccountId={activeAccountId}
+        currentUserId={currentUserId}
         onSwitchAccount={handleSwitchAccount}
         onAddAccount={handleAddAccount}
         onRenameAccount={handleRenameAccount}
@@ -908,8 +954,9 @@ export const App: React.FC = () => {
             projects={projects}
             transactions={transactions}
             teamMembers={teamMembers}
-            divisions={(accounts.find((a) => a.id === activeAccountId) || accounts[0])?.divisions || []}
+            divisions={activeAccount?.divisions || []}
             currentUserId={currentUserId}
+            isCompanyAdmin={isCompanyAdmin}
             onAddProject={handleAddProject}
             onEditProject={handleEditProject}
             onDeleteProject={handleDeleteProject}
@@ -931,14 +978,17 @@ export const App: React.FC = () => {
             incomeCategories={incomeCategories}
             expenseCategories={expenseCategories}
             userProfile={userProfile}
-            activeAccount={accounts.find((a) => a.id === activeAccountId) || accounts[0]}
+            activeAccount={activeAccount}
+            isCompanyAdmin={isCompanyAdmin}
             onUpdateAccount={handleUpdateAccount}
             onUpdateIncomeCategories={(cats) => {
+              if (!isCompanyAdmin) return;
               setIncomeCategories(cats);
               saveStoredIncomeCategories(cats);
               void saveCategoriesToSupabase({ incomeCategories: cats });
             }}
             onUpdateExpenseCategories={(cats) => {
+              if (!isCompanyAdmin) return;
               setExpenseCategories(cats);
               saveStoredExpenseCategories(cats);
               void saveCategoriesToSupabase({ expenseCategories: cats });

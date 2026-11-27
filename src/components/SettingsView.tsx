@@ -51,6 +51,7 @@ interface SettingsViewProps {
   expenseCategories: string[];
   userProfile: UserProfile;
   activeAccount?: Account;
+  isCompanyAdmin?: boolean;
   onUpdateAccount?: (account: Account) => void;
   onUpdateIncomeCategories: (cats: string[]) => void;
   onUpdateExpenseCategories: (cats: string[]) => void;
@@ -91,6 +92,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   expenseCategories,
   userProfile,
   activeAccount,
+  isCompanyAdmin = true,
   onUpdateAccount,
   onUpdateIncomeCategories,
   onUpdateExpenseCategories,
@@ -537,6 +539,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
           {/* Company Profile Form */}
           <form onSubmit={handleSaveCompanyProfile} className="space-y-3 bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80">
+            {!isCompanyAdmin && (
+              <p className="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+                Read-only: Only the Company Admin can edit the company profile.
+              </p>
+            )}
+            <fieldset disabled={!isCompanyAdmin} className="space-y-3 disabled:opacity-75">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-600 mb-1">
@@ -605,14 +613,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
             </div>
 
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
-              >
-                Save Company Profile
-              </button>
-            </div>
+            {isCompanyAdmin && (
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
+                >
+                  Save Company Profile
+                </button>
+              </div>
+            )}
+            </fieldset>
           </form>
         </div>
       ) : showCompanyDivisionsPage ? (
@@ -636,6 +647,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
 
           <div className="space-y-3 bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80">
+            {!isCompanyAdmin ? (
+              <p className="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+                Read-only: Only the Company Admin can add or remove divisions.
+              </p>
+            ) : (
             <form onSubmit={handleAddDivision} className="flex gap-2">
               <input
                 type="text"
@@ -651,6 +667,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 Add
               </button>
             </form>
+            )}
 
             {(activeAccount?.divisions || []).length === 0 ? (
               <p className="text-[11px] text-slate-500">
@@ -673,14 +690,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             : `${divProjects.length} ${divProjects.length === 1 ? 'project' : 'projects'}: ${divProjects.map((p) => p.name).join(', ')}`}
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveDivision(div)}
-                        className="p-1 rounded-lg hover:text-rose-600 hover:bg-rose-50 cursor-pointer text-slate-400 shrink-0"
-                        aria-label={`Remove division ${div}`}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {isCompanyAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveDivision(div)}
+                          className="p-1 rounded-lg hover:text-rose-600 hover:bg-rose-50 cursor-pointer text-slate-400 shrink-0"
+                          aria-label={`Remove division ${div}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   );
                 })}
@@ -1045,6 +1064,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
 
           {/* Add Team Member Form */}
+          {!isCompanyAdmin ? (
+            <p className="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+              Read-only: Only the Company Admin can add or remove team members.
+            </p>
+          ) : (
           <form
             onSubmit={handleCreateTeamMember}
             className="space-y-3 bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80"
@@ -1102,6 +1126,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </button>
             </div>
           </form>
+          )}
 
           {/* Team Members List */}
           {teamMembers.length === 0 ? (
@@ -1126,14 +1151,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       {member.userLink || member.userId}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => onDeleteTeamMember(member.id)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer shrink-0"
-                    title="Remove team member"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  {isCompanyAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => onDeleteTeamMember(member.id)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer shrink-0"
+                      title="Remove team member"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -1338,6 +1365,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
           {openSections.incomeCats && (
           <div className="pt-4 mt-3 border-t border-slate-100">
+            {isCompanyAdmin ? (
             <form onSubmit={handleAddIncomeCategory} className="flex gap-2 mb-4">
               <input
                 type="text"
@@ -1353,6 +1381,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 Add
               </button>
             </form>
+            ) : (
+              <p className="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mb-3">
+                Read-only: Only the Company Admin can add or remove categories.
+              </p>
+            )}
 
             <div className="flex flex-wrap gap-1.5 max-h-56 overflow-y-auto p-1 no-scrollbar">
               {incomeCategories.map((cat) => (
@@ -1361,14 +1394,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold"
                 >
                   <span>{cat}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveIncomeCategory(cat)}
-                    className="p-0.5 hover:text-rose-600 cursor-pointer text-slate-400"
-                    aria-label={`Remove category ${cat}`}
-                  >
-                    ×
-                  </button>
+                  {isCompanyAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveIncomeCategory(cat)}
+                      className="p-0.5 hover:text-rose-600 cursor-pointer text-slate-400"
+                      aria-label={`Remove category ${cat}`}
+                    >
+                      ×
+                    </button>
+                  )}
                 </span>
               ))}
             </div>
@@ -1397,6 +1432,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
           {openSections.expenseCats && (
           <div className="pt-4 mt-3 border-t border-slate-100">
+            {isCompanyAdmin ? (
             <form onSubmit={handleAddExpenseCategory} className="flex gap-2 mb-4">
               <input
                 type="text"
@@ -1412,6 +1448,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 Add
               </button>
             </form>
+            ) : (
+              <p className="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mb-3">
+                Read-only: Only the Company Admin can add or remove categories.
+              </p>
+            )}
 
             <div className="flex flex-wrap gap-1.5 max-h-56 overflow-y-auto p-1 no-scrollbar">
               {expenseCategories.map((cat) => (
@@ -1420,14 +1461,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-800 border border-rose-200 text-xs font-semibold"
                 >
                   <span>{cat}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveExpenseCategory(cat)}
-                    className="p-0.5 hover:text-rose-600 cursor-pointer text-slate-400"
-                    aria-label={`Remove category ${cat}`}
-                  >
-                    ×
-                  </button>
+                  {isCompanyAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveExpenseCategory(cat)}
+                      className="p-0.5 hover:text-rose-600 cursor-pointer text-slate-400"
+                      aria-label={`Remove category ${cat}`}
+                    >
+                      ×
+                    </button>
+                  )}
                 </span>
               ))}
             </div>

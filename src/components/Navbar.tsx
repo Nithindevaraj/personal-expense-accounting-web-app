@@ -23,6 +23,7 @@ import { DEFAULT_ACCOUNT_ID } from '../types';
 import { formatINR } from '../utils/formatters';
 import type { UserProfile } from '../utils/storage';
 import { useAuth } from '../context/AuthContext';
+import { isUserCompanyAdmin } from '../utils/projectPermissions';
 import {
   applyTheme,
   getStoredTheme,
@@ -45,6 +46,7 @@ interface NavbarProps {
   onOpenProfile: () => void;
   accounts: Account[];
   activeAccountId: string;
+  currentUserId?: string;
   onSwitchAccount: (id: string) => void;
   onAddAccount: (name: string) => void;
   onRenameAccount: (id: string, name: string) => void;
@@ -60,6 +62,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenProfile,
   accounts,
   activeAccountId,
+  currentUserId,
   onSwitchAccount,
   onAddAccount,
   onRenameAccount,
@@ -210,27 +213,29 @@ export const Navbar: React.FC<NavbarProps> = ({
                                   {isActive && <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 ml-auto" />}
                                 </button>
                                 <div className="flex items-center gap-0.5 shrink-0">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setEditingAccountId(acc.id);
-                                      setEditingAccountName(acc.name);
-                                    }}
-                                    className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
-                                    title="Rename account"
-                                  >
-                                    <Pencil className="w-3 h-3" />
-                                  </button>
-                                  {acc.id !== DEFAULT_ACCOUNT_ID && (
+                                  {isUserCompanyAdmin(acc, currentUserId) && (
                                     <button
                                       type="button"
                                       onClick={() => {
-                                        if (window.confirm(`Delete account "${acc.name}"?`)) {
+                                        setEditingAccountId(acc.id);
+                                        setEditingAccountName(acc.name);
+                                      }}
+                                      className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+                                      title="Rename company"
+                                    >
+                                      <Pencil className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                  {acc.id !== DEFAULT_ACCOUNT_ID && isUserCompanyAdmin(acc, currentUserId) && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (window.confirm(`Delete company "${acc.name}"?`)) {
                                           onDeleteAccount(acc.id);
                                         }
                                       }}
                                       className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
-                                      title="Delete account"
+                                      title="Delete company"
                                     >
                                       <Trash2 className="w-3 h-3" />
                                     </button>
