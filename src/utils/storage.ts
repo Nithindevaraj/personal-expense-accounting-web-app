@@ -1,6 +1,7 @@
 import {
   type Account,
   type RecurringTransaction,
+  type TeamMember,
   DEFAULT_ACCOUNT_ID,
   DEFAULT_ACCOUNTS,
   DEFAULT_EXPENSE_CATEGORIES,
@@ -19,7 +20,75 @@ const STORAGE_KEYS = {
   ACCOUNTS: 'personal_accounting_accounts_v1',
   ACTIVE_ACCOUNT_ID: 'personal_accounting_active_account_v1',
   RECURRING: 'personal_accounting_recurring_v1',
+  TEAMS: 'personal_accounting_teams_v1',
+  LOCAL_USER_ID: 'personal_accounting_local_user_id_v1',
 };
+
+export function getOrCreateLocalUserId(): string {
+  try {
+    const existing = localStorage.getItem(STORAGE_KEYS.LOCAL_USER_ID);
+    if (existing) return existing;
+    const generated = `usr-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+    localStorage.setItem(STORAGE_KEYS.LOCAL_USER_ID, generated);
+    return generated;
+  } catch {
+    return 'usr-local';
+  }
+}
+
+export function buildIndividualUserLink(userId: string, name?: string): string {
+  const base =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}${window.location.pathname}`
+      : 'https://nithindevaraj.github.io/personal-expense-accounting-web-app/';
+  const params = new URLSearchParams();
+  params.set('member', userId);
+  if (name && name.trim()) {
+    params.set('name', name.trim());
+  }
+  return `${base}?${params.toString()}`;
+}
+
+export function parseIndividualUserLink(rawInput: string): {
+  userId: string;
+  name?: string;
+  userLink: string;
+} {
+  const trimmed = rawInput.trim();
+  try {
+    const url = new URL(trimmed);
+    const memberId = url.searchParams.get('member')?.trim();
+    const memberName = url.searchParams.get('name')?.trim() || undefined;
+    if (memberId) {
+      return { userId: memberId, name: memberName, userLink: trimmed };
+    }
+  } catch {
+    // Not a full URL; treat as raw user ID
+  }
+  return {
+    userId: trimmed,
+    userLink: buildIndividualUserLink(trimmed),
+  };
+}
+
+export function getStoredTeamMembers(): TeamMember[] {
+  try {
+    const data = localStorage.getItem(STORAGE_KEYS.TEAMS);
+    if (!data) return [];
+    const parsed = JSON.parse(data);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveStoredTeamMembers(members: TeamMember[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.TEAMS, JSON.stringify(members));
+  } catch (err) {
+    console.error('Error saving team members:', err);
+  }
+}
 
 export function getStoredRecurringTransactions(): RecurringTransaction[] {
   try {

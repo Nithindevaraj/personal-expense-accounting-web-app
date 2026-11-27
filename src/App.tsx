@@ -1,6 +1,13 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Plus, Loader2 } from 'lucide-react';
-import type { Account, Project, RecurringTransaction, Transaction, TransactionType } from './types';
+import type {
+  Account,
+  Project,
+  RecurringTransaction,
+  TeamMember,
+  Transaction,
+  TransactionType,
+} from './types';
 import {
   DEFAULT_ACCOUNT_ID,
   DEFAULT_EXPENSE_CATEGORIES,
@@ -17,6 +24,7 @@ import {
   getStoredIncomeCategories,
   getStoredProjects,
   getStoredRecurringTransactions,
+  getStoredTeamMembers,
   getStoredTransactions,
   getUserProfile,
   resetToDefaults,
@@ -26,6 +34,7 @@ import {
   saveStoredIncomeCategories,
   saveStoredProjects,
   saveStoredRecurringTransactions,
+  saveStoredTeamMembers,
   saveStoredTransactions,
   saveUserProfile,
 } from './utils/storage';
@@ -62,9 +71,11 @@ import {
   getAccountsFromSupabase,
   getCategoriesFromSupabase,
   getRecurringFromSupabase,
+  getTeamMembersFromSupabase,
   saveAccountsToSupabase,
   saveCategoriesToSupabase,
   saveRecurringToSupabase,
+  saveTeamMembersToSupabase,
 } from './services/userSettingsService';
 
 export const App: React.FC = () => {
@@ -134,6 +145,7 @@ export const App: React.FC = () => {
   const [recurringTransactions, setRecurringTransactions] = useState<RecurringTransaction[]>(
     getStoredRecurringTransactions
   );
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(getStoredTeamMembers);
   const processingRecurringRef = useRef(false);
 
   // Modals
@@ -217,16 +229,27 @@ export const App: React.FC = () => {
         getCategoriesFromSupabase(),
         getAccountsFromSupabase(),
         getRecurringFromSupabase(),
+        getTeamMembersFromSupabase(),
       ])
-        .then(([fetchedTx, fetchedProjects, fetchedCats, fetchedAccounts, fetchedRecurring]) => {
-          if (!isMounted) return;
-          setTransactions(fetchedTx);
-          setProjects(fetchedProjects);
-          setIncomeCategories(fetchedCats.incomeCategories);
-          setExpenseCategories(fetchedCats.expenseCategories);
-          setAccounts(fetchedAccounts);
-          setRecurringTransactions(fetchedRecurring);
-        })
+        .then(
+          ([
+            fetchedTx,
+            fetchedProjects,
+            fetchedCats,
+            fetchedAccounts,
+            fetchedRecurring,
+            fetchedTeamMembers,
+          ]) => {
+            if (!isMounted) return;
+            setTransactions(fetchedTx);
+            setProjects(fetchedProjects);
+            setIncomeCategories(fetchedCats.incomeCategories);
+            setExpenseCategories(fetchedCats.expenseCategories);
+            setAccounts(fetchedAccounts);
+            setRecurringTransactions(fetchedRecurring);
+            setTeamMembers(fetchedTeamMembers);
+          }
+        )
         .catch((err) => {
           console.error('Error syncing data from Supabase:', err);
         })
@@ -304,13 +327,15 @@ export const App: React.FC = () => {
               getCategoriesFromSupabase(),
               getAccountsFromSupabase(),
               getRecurringFromSupabase(),
+              getTeamMembersFromSupabase(),
             ])
-              .then(([fetchedCats, fetchedAccounts, fetchedRecurring]) => {
+              .then(([fetchedCats, fetchedAccounts, fetchedRecurring, fetchedTeamMembers]) => {
                 if (!isMounted) return;
                 setIncomeCategories(fetchedCats.incomeCategories);
                 setExpenseCategories(fetchedCats.expenseCategories);
                 setAccounts(fetchedAccounts);
                 setRecurringTransactions(fetchedRecurring);
+                setTeamMembers(fetchedTeamMembers);
               })
               .catch(() => {});
           }
@@ -623,6 +648,32 @@ export const App: React.FC = () => {
     });
   };
 
+  const handleAddTeamMember = (
+    member: Omit<TeamMember, 'id' | 'accountId' | 'createdAt'>
+  ) => {
+    const newMember: TeamMember = {
+      ...member,
+      id: `tm-${Date.now()}`,
+      accountId: activeAccountId,
+      createdAt: Date.now(),
+    };
+    setTeamMembers((prev) => {
+      const updated = [...prev, newMember];
+      saveStoredTeamMembers(updated);
+      void saveTeamMembersToSupabase(updated);
+      return updated;
+    });
+  };
+
+  const handleDeleteTeamMember = (id: string) => {
+    setTeamMembers((prev) => {
+      const updated = prev.filter((m) => m.id !== id);
+      saveStoredTeamMembers(updated);
+      void saveTeamMembersToSupabase(updated);
+      return updated;
+    });
+  };
+
   // Auto-generate due recurring transactions for the current month
   useEffect(() => {
     if (isDataLoading || processingRecurringRef.current) return;
@@ -849,6 +900,9 @@ export const App: React.FC = () => {
             )}
             onAddRecurring={handleAddRecurring}
             onDeleteRecurring={handleDeleteRecurring}
+            teamMembers={teamMembers.filter((m) => m.accountId === activeAccountId)}
+            onAddTeamMember={handleAddTeamMember}
+            onDeleteTeamMember={handleDeleteTeamMember}
           />
         )}
       </main>

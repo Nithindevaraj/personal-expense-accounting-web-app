@@ -1,14 +1,21 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { type Account, type RecurringTransaction, DEFAULT_ACCOUNTS } from '../types';
+import {
+  type Account,
+  type RecurringTransaction,
+  type TeamMember,
+  DEFAULT_ACCOUNTS,
+} from '../types';
 import {
   getStoredAccounts,
   getStoredExpenseCategories,
   getStoredIncomeCategories,
   getStoredRecurringTransactions,
+  getStoredTeamMembers,
   saveStoredAccounts,
   saveStoredExpenseCategories,
   saveStoredIncomeCategories,
   saveStoredRecurringTransactions,
+  saveStoredTeamMembers,
 } from '../utils/storage';
 
 interface DbUserSettingsRow {
@@ -196,5 +203,53 @@ export async function saveRecurringToSupabase(items: RecurringTransaction[]): Pr
 
   if (error) {
     console.error('Failed to save recurring transactions to Supabase:', error.message);
+  }
+}
+
+export async function getTeamMembersFromSupabase(): Promise<TeamMember[]> {
+  const localMembers = getStoredTeamMembers();
+  if (!isSupabaseConfigured) return localMembers;
+
+  const { data, error } = await supabase
+    .from('user_settings')
+    .select('team_members')
+    .maybeSingle();
+
+  if (error) {
+    console.error('Failed to fetch team members from Supabase:', error.message);
+    return localMembers;
+  }
+
+  const cloudMembers = Array.isArray(
+    (data as { team_members?: unknown } | null)?.team_members
+  )
+    ? ((data as { team_members: TeamMember[] }).team_members)
+    : [];
+
+  if (cloudMembers.length === 0 && localMembers.length > 0) {
+    await saveTeamMembersToSupabase(localMembers);
+    return localMembers;
+  }
+
+  saveStoredTeamMembers(cloudMembers);
+  return cloudMembers;
+}
+
+export async function saveTeamMembersToSupabase(members: TeamMember[]): Promise<void> {
+  if (!isSupabaseConfigured) return;
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { error } = await supabase
+    .from('user_settings')
+    .upsert([{ user_id: user.id, team_members: members }], {
+      onConflict: 'user_id',
+    });
+
+  if (error) {
+    console.error('Failed to save team members to Supabase:', error.message);
   }
 }

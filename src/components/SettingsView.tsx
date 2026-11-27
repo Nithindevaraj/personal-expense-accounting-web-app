@@ -16,14 +16,29 @@ import {
   Repeat,
   Plus,
   FolderKanban,
+  Users,
+  UserPlus,
+  Link2,
+  Copy,
+  Check,
 } from 'lucide-react';
-import type { Project, RecurringTransaction, Transaction, TransactionType } from '../types';
+import type {
+  Project,
+  RecurringTransaction,
+  TeamMember,
+  Transaction,
+  TransactionType,
+} from '../types';
 import { formatINR } from '../utils/formatters';
 import {
   type UserProfile,
+  buildIndividualUserLink,
+  getOrCreateLocalUserId,
+  parseIndividualUserLink,
   saveStoredExpenseCategories,
   saveStoredIncomeCategories,
 } from '../utils/storage';
+import { useAuth } from '../context/AuthContext';
 import {
   exportTransactionsToPDF,
   parseCSVToTransactions,
@@ -47,6 +62,9 @@ interface SettingsViewProps {
     item: Omit<RecurringTransaction, 'id' | 'accountId' | 'createdAt' | 'lastGeneratedMonth'>
   ) => void;
   onDeleteRecurring: (id: string) => void;
+  teamMembers: TeamMember[];
+  onAddTeamMember: (member: Omit<TeamMember, 'id' | 'accountId' | 'createdAt'>) => void;
+  onDeleteTeamMember: (id: string) => void;
 }
 
 function formatDayOrdinal(day: number): string {
@@ -79,7 +97,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   recurringTransactions,
   onAddRecurring,
   onDeleteRecurring,
+  teamMembers,
+  onAddTeamMember,
+  onDeleteTeamMember,
 }) => {
+  const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
 
@@ -87,6 +109,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [newExpenseCat, setNewExpenseCat] = useState('');
   const [notification, setNotification] = useState<string | null>(null);
   const [showRecurringPage, setShowRecurringPage] = useState(false);
+  const [showTeamsPage, setShowTeamsPage] = useState(false);
+  const [copiedTeamLink, setCopiedTeamLink] = useState(false);
+  const [memberLinkInput, setMemberLinkInput] = useState('');
+  const [memberNameInput, setMemberNameInput] = useState('');
+  const [memberDesignationInput, setMemberDesignationInput] = useState('');
+
+  const individualUserId = user?.id || getOrCreateLocalUserId();
+  const individualUserLink = buildIndividualUserLink(
+    individualUserId,
+    user?.user_metadata?.full_name || userProfile.name
+  );
   const [openSections, setOpenSections] = useState({
     importExport: false,
     incomeCats: false,
@@ -150,6 +183,48 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setRecDescription('');
     setRecNotes('');
     showNotification(`Recurring ${recType.toLowerCase()} added for ${formatDayOrdinal(parsedDay)} of every month`);
+  };
+
+  const handleCopyTeamUserLink = async () => {
+    try {
+      await navigator.clipboard.writeText(individualUserLink);
+      setCopiedTeamLink(true);
+      setTimeout(() => setCopiedTeamLink(false), 2000);
+    } catch {
+      const input = document.createElement('input');
+      input.value = individualUserLink;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      setCopiedTeamLink(true);
+      setTimeout(() => setCopiedTeamLink(false), 2000);
+    }
+  };
+
+  const handleMemberLinkChange = (value: string) => {
+    setMemberLinkInput(value);
+    const parsed = parseIndividualUserLink(value);
+    if (parsed.name && !memberNameInput.trim()) {
+      setMemberNameInput(parsed.name);
+    }
+  };
+
+  const handleCreateTeamMember = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!memberLinkInput.trim() || !memberDesignationInput.trim()) return;
+    const parsed = parseIndividualUserLink(memberLinkInput);
+    if (!parsed.userId) return;
+    onAddTeamMember({
+      userId: parsed.userId,
+      userLink: parsed.userLink,
+      name: memberNameInput.trim() || parsed.name || 'Team Member',
+      designation: memberDesignationInput.trim(),
+    });
+    setMemberLinkInput('');
+    setMemberNameInput('');
+    setMemberDesignationInput('');
+    showNotification('Team member added');
   };
 
   const toggleSection = (key: keyof typeof openSections) => {
@@ -321,7 +396,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </button>
               <Repeat className="w-5 h-5 text-indigo-600 shrink-0" />
               <h2 className="text-sm sm:text-base font-bold text-slate-900">
-                Recurring Transactions ({recurringTransactions.length})
+                Recurring Transactions
               </h2>
             </div>
             <span className="text-[11px] font-semibold text-slate-500">
@@ -564,6 +639,161 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             )}
           </div>
         </div>
+      ) : showTeamsPage ? (
+        /* Teams Full Page */
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+          <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowTeamsPage(false)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer transition-colors"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back</span>
+              </button>
+              <Users className="w-5 h-5 text-emerald-600 shrink-0" />
+              <h2 className="text-sm sm:text-base font-bold text-slate-900">
+                Teams ({teamMembers.length})
+              </h2>
+            </div>
+            <span className="text-[11px] font-semibold text-slate-500">
+              Members &amp; Designations
+            </span>
+          </div>
+
+          {/* Copyable Individual User Link */}
+          <div className="p-3.5 rounded-xl bg-indigo-50/60 border border-indigo-200/80 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <Link2 className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Your Individual User Link</span>
+              </label>
+              <button
+                type="button"
+                onClick={handleCopyTeamUserLink}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold cursor-pointer transition-colors"
+              >
+                {copiedTeamLink ? (
+                  <>
+                    <Check className="w-3 h-3" />
+                    <span>Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3 h-3" />
+                    <span>Copy Link</span>
+                  </>
+                )}
+              </button>
+            </div>
+            <input
+              type="text"
+              readOnly
+              value={individualUserLink}
+              onClick={(e) => (e.target as HTMLInputElement).select()}
+              className="w-full px-2.5 py-1.5 text-[11px] font-mono bg-white border border-indigo-200 rounded-xl text-slate-700 focus:outline-hidden"
+            />
+            <p className="text-[11px] text-slate-500">
+              Copy and share this individual link to add a user to a team.
+            </p>
+          </div>
+
+          {/* Add Team Member Form */}
+          <form
+            onSubmit={handleCreateTeamMember}
+            className="space-y-3 bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80"
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div className="sm:col-span-2">
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                  Individual User Link or User ID *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={memberLinkInput}
+                  onChange={(e) => handleMemberLinkChange(e.target.value)}
+                  placeholder="Paste user's individual link or User ID"
+                  className="w-full px-3 py-2 text-base sm:text-xs bg-white border border-slate-200 rounded-xl font-medium text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                  Member Name
+                </label>
+                <input
+                  type="text"
+                  value={memberNameInput}
+                  onChange={(e) => setMemberNameInput(e.target.value)}
+                  placeholder="e.g. Ravi Kumar (auto-filled from link)"
+                  className="w-full px-3 py-2 text-base sm:text-xs bg-white border border-slate-200 rounded-xl font-medium text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                  Designation *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={memberDesignationInput}
+                  onChange={(e) => setMemberDesignationInput(e.target.value)}
+                  placeholder="e.g. Accountant, Site Manager, Partner"
+                  className="w-full px-3 py-2 text-base sm:text-xs bg-white border border-slate-200 rounded-xl font-medium text-slate-800"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-1">
+              <button
+                type="submit"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer shadow-xs"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>Add Team Member</span>
+              </button>
+            </div>
+          </form>
+
+          {/* Team Members List */}
+          {teamMembers.length === 0 ? (
+            <div className="p-6 text-center rounded-xl border border-dashed border-slate-200 text-xs text-slate-500">
+              No team members added yet. Paste a member&apos;s individual user link above and assign their designation.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {teamMembers.map((member) => (
+                <div
+                  key={member.id}
+                  className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-slate-900">{member.name}</span>
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                        {member.designation}
+                      </span>
+                    </div>
+                    <p className="text-[11px] font-mono text-slate-500 mt-1 truncate">
+                      {member.userLink || member.userId}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onDeleteTeamMember(member.id)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer shrink-0"
+                    title="Remove team member"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       ) : (
         <>
           {/* Recurring Transactions Navigation Card */}
@@ -575,7 +805,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <div className="flex items-center gap-2">
               <Repeat className="w-5 h-5 text-indigo-600 shrink-0" />
               <h2 className="text-sm sm:text-base font-bold text-slate-900">
-                Recurring Transactions ({recurringTransactions.length})
+                Recurring Transactions
+              </h2>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+          </button>
+
+          {/* Teams Navigation Card */}
+          <button
+            type="button"
+            onClick={() => setShowTeamsPage(true)}
+            className="w-full bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-2 text-left hover:bg-slate-50/70 transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-emerald-600 shrink-0" />
+              <h2 className="text-sm sm:text-base font-bold text-slate-900">
+                Teams ({teamMembers.length})
               </h2>
             </div>
             <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
@@ -678,7 +923,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           >
             <h3 className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-              Income Categories ({incomeCategories.length})
+              Income Categories
             </h3>
             {openSections.incomeCats ? (
               <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" />
@@ -737,7 +982,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           >
             <h3 className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-              Expense Categories ({expenseCategories.length})
+              Expense Categories
             </h3>
             {openSections.expenseCats ? (
               <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" />

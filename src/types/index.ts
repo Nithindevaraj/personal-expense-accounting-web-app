@@ -74,6 +74,16 @@ export interface RecurringTransaction {
   createdAt: number;
 }
 
+export interface TeamMember {
+  id: string;
+  accountId: string;
+  userId: string;
+  userLink: string;
+  name: string;
+  designation: string;
+  createdAt: number;
+}
+
 export const DEFAULT_ACCOUNT_ID = 'default';
 export const DEFAULT_ACCOUNTS: Account[] = [
   { id: DEFAULT_ACCOUNT_ID, name: 'Personal' },

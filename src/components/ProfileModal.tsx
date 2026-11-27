@@ -1,6 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Camera, Trash2, User, Check, Globe, ShieldCheck, LogOut } from 'lucide-react';
-import type { UserProfile } from '../utils/storage';
+import { X, Camera, Trash2, User, Check, Globe, ShieldCheck, LogOut, Link2, Copy } from 'lucide-react';
+import {
+  type UserProfile,
+  buildIndividualUserLink,
+  getOrCreateLocalUserId,
+} from '../utils/storage';
 import { useAuth } from '../context/AuthContext';
 
 interface ProfileModalProps {
@@ -22,6 +26,30 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   const [name, setName] = useState(userProfile.name);
   const [currency, setCurrency] = useState(userProfile.currency || 'INR');
   const [avatar, setAvatar] = useState<string | undefined>(userProfile.avatar);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const individualUserId = user?.id || getOrCreateLocalUserId();
+  const individualUserLink = buildIndividualUserLink(
+    individualUserId,
+    name || user?.user_metadata?.full_name || userProfile.name
+  );
+
+  const handleCopyUserLink = async () => {
+    try {
+      await navigator.clipboard.writeText(individualUserLink);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    } catch {
+      const input = document.createElement('input');
+      input.value = individualUserLink;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -190,6 +218,43 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 <option value="SGD">SGD (S$) - Singapore Dollar</option>
               </select>
             </div>
+          </div>
+
+          {/* Individual User Link (Shareable for Teams) */}
+          <div className="p-3 rounded-2xl bg-indigo-50/60 border border-indigo-200/80 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <Link2 className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Individual User Link</span>
+              </label>
+              <button
+                type="button"
+                onClick={handleCopyUserLink}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold cursor-pointer transition-colors"
+              >
+                {copiedLink ? (
+                  <>
+                    <Check className="w-3 h-3" />
+                    <span>Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3 h-3" />
+                    <span>Copy Link</span>
+                  </>
+                )}
+              </button>
+            </div>
+            <input
+              type="text"
+              readOnly
+              value={individualUserLink}
+              onClick={(e) => (e.target as HTMLInputElement).select()}
+              className="w-full px-2.5 py-1.5 text-[11px] font-mono bg-white border border-indigo-200 rounded-xl text-slate-700 focus:outline-hidden"
+            />
+            <p className="text-[11px] text-slate-500">
+              Share this link so you can be added to a team with your designation.
+            </p>
           </div>
 
           {/* Google Account Status Badge */}
