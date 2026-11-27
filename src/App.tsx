@@ -690,6 +690,15 @@ export const App: React.FC = () => {
     });
   };
 
+  const handleEditRecurring = (updatedItem: RecurringTransaction) => {
+    setRecurringTransactions((prev) => {
+      const updated = prev.map((r) => (r.id === updatedItem.id ? updatedItem : r));
+      saveStoredRecurringTransactions(updated);
+      void saveRecurringToSupabase(updated);
+      return updated;
+    });
+  };
+
   const handleAddTeamMember = (
     member: Omit<TeamMember, 'id' | 'accountId' | 'createdAt'>
   ) => {
@@ -945,6 +954,7 @@ export const App: React.FC = () => {
               (r) => r.accountId === activeAccountId
             )}
             onAddRecurring={handleAddRecurring}
+            onEditRecurring={handleEditRecurring}
             onDeleteRecurring={handleDeleteRecurring}
             teamMembers={teamMembers.filter((m) => m.accountId === activeAccountId)}
             onAddTeamMember={handleAddTeamMember}

@@ -19,6 +19,7 @@ import {
   Users,
   UserPlus,
   Building2,
+  Edit2,
 } from 'lucide-react';
 import type {
   Account,
@@ -59,6 +60,7 @@ interface SettingsViewProps {
   onAddRecurring: (
     item: Omit<RecurringTransaction, 'id' | 'accountId' | 'createdAt' | 'lastGeneratedMonth'>
   ) => void;
+  onEditRecurring?: (item: RecurringTransaction) => void;
   onDeleteRecurring: (id: string) => void;
   teamMembers: TeamMember[];
   onAddTeamMember: (member: Omit<TeamMember, 'id' | 'accountId' | 'createdAt'>) => void;
@@ -96,6 +98,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onResetToDefaults,
   recurringTransactions,
   onAddRecurring,
+  onEditRecurring,
   onDeleteRecurring,
   teamMembers,
   onAddTeamMember,
@@ -191,6 +194,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [recCategory, setRecCategory] = useState(expenseCategories[0] || 'Rents');
   const [recDescription, setRecDescription] = useState('');
   const [recNotes, setRecNotes] = useState('');
+  const [editingRecurring, setEditingRecurring] = useState<RecurringTransaction | null>(null);
 
   const handleRecTypeChange = (nextType: TransactionType) => {
     setRecType(nextType);
@@ -200,12 +204,51 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
   };
 
+  const handleStartEditRecurring = (item: RecurringTransaction) => {
+    setEditingRecurring(item);
+    setRecType(item.type);
+    setRecDay(String(item.dayOfMonth));
+    setRecAmount(String(item.amount));
+    setRecTag(item.tag || topProjects[0]?.name || 'General Transactions');
+    setRecSubTag(item.subTag || null);
+    setRecCategory(item.category);
+    setRecDescription(item.description || '');
+    setRecNotes(item.notes || '');
+  };
+
+  const handleCancelEditRecurring = () => {
+    setEditingRecurring(null);
+    setRecAmount('');
+    setRecDescription('');
+    setRecNotes('');
+  };
+
   const handleCreateRecurring = (e: React.FormEvent) => {
     e.preventDefault();
     const parsedAmt = parseFloat(recAmount);
     const parsedDay = Math.min(31, Math.max(1, parseInt(recDay, 10) || 1));
     if (isNaN(parsedAmt) || parsedAmt <= 0) {
       alert('Please enter a valid positive amount.');
+      return;
+    }
+
+    if (editingRecurring && onEditRecurring) {
+      onEditRecurring({
+        ...editingRecurring,
+        type: recType,
+        dayOfMonth: parsedDay,
+        amount: parsedAmt,
+        tag: recTag || topProjects[0]?.name || 'General Transactions',
+        subTag: recSubTag || null,
+        category: recCategory || (recType === 'Income' ? 'Salary' : 'Food'),
+        description: recDescription.trim(),
+        notes: recNotes.trim(),
+      });
+      setEditingRecurring(null);
+      setRecAmount('');
+      setRecDescription('');
+      setRecNotes('');
+      showNotification(`Updated recurring ${recType.toLowerCase()} for ${formatDayOrdinal(parsedDay)} of every month`);
       return;
     }
 
@@ -788,13 +831,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </div>
               </div>
 
-              <div className="flex justify-end pt-1">
+              <div className="flex justify-end gap-2 pt-1">
+                {editingRecurring && (
+                  <button
+                    type="button"
+                    onClick={handleCancelEditRecurring}
+                    className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-bold cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                )}
                 <button
                   type="submit"
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold cursor-pointer shadow-xs"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Add Recurring Transaction</span>
+                  <span>{editingRecurring ? 'Save Changes' : 'Add Recurring Transaction'}</span>
                 </button>
               </div>
             </form>
@@ -878,6 +930,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                   >
                                     {formatINR(item.amount)}
                                   </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStartEditRecurring(item)}
+                                    className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer"
+                                    title="Edit recurring transaction"
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                  </button>
                                   <button
                                     type="button"
                                     onClick={() => onDeleteRecurring(item.id)}

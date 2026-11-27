@@ -1,5 +1,5 @@
 // Personal Accounting & Expense Manager - PWA Service Worker
-const CACHE_NAME = 'expense-app-cache-v59';
+const CACHE_NAME = 'expense-app-cache-v60';
 
 const PRECACHE_ASSETS = [
   './',
