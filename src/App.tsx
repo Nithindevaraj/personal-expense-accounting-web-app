@@ -10,7 +10,6 @@ import type {
 } from './types';
 import {
   DEFAULT_ACCOUNT_ID,
-  DEFAULT_ACCOUNTS,
   DEFAULT_EXPENSE_CATEGORIES,
   DEFAULT_INCOME_CATEGORIES,
   createDefaultProjectsForAccount,
@@ -671,7 +670,6 @@ export const App: React.FC = () => {
   };
 
   const handleDeleteAccount = async (id: string) => {
-    if (id === DEFAULT_ACCOUNT_ID) return;
     const target = accounts.find((a) => a.id === id);
     if (!isUserCompanyAdmin(target, currentUserId)) return;
 
@@ -832,19 +830,15 @@ export const App: React.FC = () => {
 
   const handleResetToDefaults = async () => {
     const prevProjectIds = projects.map((p) => p.id);
-    const defaultProjects = createDefaultProjectsForAccount(DEFAULT_ACCOUNT_ID);
+    const defaultProjects = createDefaultProjectsForAccount(activeAccountId);
 
-    setAccounts(DEFAULT_ACCOUNTS);
-    saveStoredAccounts(DEFAULT_ACCOUNTS);
-    setActiveAccountId(DEFAULT_ACCOUNT_ID);
-    saveActiveAccountId(DEFAULT_ACCOUNT_ID);
-    setTransactions(getStoredTransactions(DEFAULT_ACCOUNT_ID));
     setProjects(defaultProjects);
-    saveStoredProjects(defaultProjects, DEFAULT_ACCOUNT_ID);
+    saveStoredProjects(defaultProjects, activeAccountId);
     setTxLedgerFilter({});
 
-    setTeamMembers([]);
-    saveStoredTeamMembers([]);
+    const remainingTeams = teamMembers.filter((m) => m.accountId !== activeAccountId);
+    setTeamMembers(remainingTeams);
+    saveStoredTeamMembers(remainingTeams);
 
     setIncomeCategories(DEFAULT_INCOME_CATEGORIES);
     saveStoredIncomeCategories(DEFAULT_INCOME_CATEGORIES);
@@ -857,10 +851,9 @@ export const App: React.FC = () => {
           await deleteProjectFromSupabase(pid);
         }
         for (const proj of defaultProjects) {
-          await upsertProjectToSupabase(proj, DEFAULT_ACCOUNT_ID);
+          await upsertProjectToSupabase(proj, activeAccountId);
         }
-        await saveAccountsToSupabase(DEFAULT_ACCOUNTS);
-        await saveTeamMembersToSupabase([]);
+        await saveTeamMembersToSupabase(remainingTeams);
         await saveCategoriesToSupabase({
           incomeCategories: DEFAULT_INCOME_CATEGORIES,
           expenseCategories: DEFAULT_EXPENSE_CATEGORIES,

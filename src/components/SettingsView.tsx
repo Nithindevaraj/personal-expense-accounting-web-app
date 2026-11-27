@@ -126,6 +126,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [companyTaxId, setCompanyTaxId] = useState(activeAccount?.taxId || '');
   const [companyAddress, setCompanyAddress] = useState(activeAccount?.address || '');
   const [newDivision, setNewDivision] = useState('');
+  const [confirmDeleteCompany, setConfirmDeleteCompany] = useState(false);
   const [memberLinkInput, setMemberLinkInput] = useState('');
   const [memberNameInput, setMemberNameInput] = useState('');
   const [memberDesignationInput, setMemberDesignationInput] = useState('');
@@ -300,6 +301,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setCompanyTaxId(activeAccount?.taxId || '');
     setCompanyAddress(activeAccount?.address || '');
     setNewDivision('');
+    setConfirmDeleteCompany(false);
     setShowCompanyProfilePage(true);
   };
 
@@ -616,25 +618,40 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
 
             {isCompanyAdmin && (
-              <div className="flex items-center justify-between gap-2 pt-1">
-                {activeAccount && activeAccount.id !== 'default' && onDeleteAccount ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (
-                        window.confirm(
-                          `Delete company "${activeAccount.name}" and all its data? This cannot be undone.`
-                        )
-                      ) {
-                        onDeleteAccount(activeAccount.id);
-                        setShowCompanyProfilePage(false);
-                      }
-                    }}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Delete Company</span>
-                  </button>
+              <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
+                {activeAccount && onDeleteAccount ? (
+                  confirmDeleteCompany ? (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setConfirmDeleteCompany(false);
+                          setShowCompanyProfilePage(false);
+                          onDeleteAccount(activeAccount.id);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Confirm Delete</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteCompany(false)}
+                        className="px-2.5 py-2 bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-xl text-xs font-bold cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDeleteCompany(true)}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete Company</span>
+                    </button>
+                  )
                 ) : (
                   <span />
                 )}
@@ -1528,7 +1545,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <span className="font-bold text-rose-800">Clear All Data:</span> Removes all Transactions and Recurring Transactions.
             </p>
             <p>
-              <span className="font-bold text-amber-800">Reset:</span> Resets Companies, Teams, Projects, Income Categories, and Expense Categories.
+              <span className="font-bold text-amber-800">Reset:</span> Resets Teams, Projects, Income Categories, and Expense Categories.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
@@ -1555,11 +1572,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             onClick={() => {
               if (
                 window.confirm(
-                  'WARNING: This will reset Companies, Teams, Projects, Income Categories, and Expense Categories back to their default state. This cannot be undone.'
+                  'WARNING: This will reset Teams, Projects, Income Categories, and Expense Categories back to their default state. This cannot be undone.'
                 )
               ) {
                 onResetToDefaults();
-                showNotification('Companies, teams, projects, and categories reset');
+                showNotification('Teams, projects, and categories reset');
               }
             }}
             className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-semibold transition-all cursor-pointer"

@@ -77,6 +77,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [newAccountName, setNewAccountName] = useState('');
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
   const [editingAccountName, setEditingAccountName] = useState('');
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const accountMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -231,20 +232,29 @@ export const Navbar: React.FC<NavbarProps> = ({
                                       <Pencil className="w-3 h-3" />
                                     </button>
                                   )}
-                                  {acc.id !== DEFAULT_ACCOUNT_ID && isUserCompanyAdmin(acc, currentUserId) && (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        if (window.confirm(`Delete company "${acc.name}"?`)) {
-                                          onDeleteAccount(acc.id);
+                                  {isUserCompanyAdmin(acc, currentUserId) && (
+                                    confirmDeleteId === acc.id ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setConfirmDeleteId(null);
                                           setIsAccountMenuOpen(false);
-                                        }
-                                      }}
-                                      className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
-                                      title="Delete company"
-                                    >
-                                      <Trash2 className="w-3 h-3" />
-                                    </button>
+                                          onDeleteAccount(acc.id);
+                                        }}
+                                        className="px-2 py-0.5 rounded-md bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-bold cursor-pointer"
+                                      >
+                                        Delete?
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => setConfirmDeleteId(acc.id)}
+                                        className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+                                        title="Delete company"
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </button>
+                                    )
                                   )}
                                 </div>
                               </>
