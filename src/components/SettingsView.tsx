@@ -33,6 +33,7 @@ import type {
   TransactionType,
 } from '../types';
 import { formatINR } from '../utils/formatters';
+import { CompanyManagerView } from './CompanyManagerView';
 import {
   type UserProfile,
   buildIndividualUserLink,
@@ -52,9 +53,13 @@ interface SettingsViewProps {
   incomeCategories: string[];
   expenseCategories: string[];
   userProfile: UserProfile;
+  accounts?: Account[];
   activeAccount?: Account;
+  currentUserId?: string;
   isCompanyAdmin?: boolean;
   isCompanyCreator?: boolean;
+  onSelectAccount?: (accountId: string) => void;
+  onAddAccount?: (name: string) => void;
   onUpdateAccount?: (account: Account) => void;
   onDeleteAccount?: (id: string) => void;
   onUpdateIncomeCategories: (cats: string[]) => void;
@@ -74,6 +79,7 @@ interface SettingsViewProps {
   onEditTeamMember?: (member: TeamMember) => void;
   onDeleteTeamMember: (id: string) => void;
   onRefreshTeamMembers?: () => void;
+  onRefreshAccounts?: () => Promise<boolean>;
 }
 
 function formatDayOrdinal(day: number): string {
@@ -97,9 +103,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   incomeCategories,
   expenseCategories,
   userProfile,
+  accounts = [],
   activeAccount,
+  currentUserId,
   isCompanyAdmin = true,
   isCompanyCreator = false,
+  onSelectAccount,
+  onAddAccount,
   onUpdateAccount,
   onDeleteAccount,
   onUpdateIncomeCategories,
@@ -117,6 +127,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onEditTeamMember,
   onDeleteTeamMember,
   onRefreshTeamMembers,
+  onRefreshAccounts,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
@@ -128,6 +139,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [showTeamsPage, setShowTeamsPage] = useState(false);
   const [showCompanyProfilePage, setShowCompanyProfilePage] = useState(false);
   const [showCompanyDivisionsPage, setShowCompanyDivisionsPage] = useState(false);
+  const [showCompanyManagerPage, setShowCompanyManagerPage] = useState(false);
   const [companyName, setCompanyName] = useState(activeAccount?.name || '');
   const [companyEmail, setCompanyEmail] = useState(activeAccount?.email || '');
   const [companyPhone, setCompanyPhone] = useState(activeAccount?.phone || '');
@@ -530,7 +542,30 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       )}
 
-      {showCompanyProfilePage ? (
+      {showCompanyManagerPage ? (
+        /* Company Accounts Manager Embedded Page */
+        <CompanyManagerView
+          userName={userProfile.name}
+          userCode={buildIndividualUserLink(currentUserId || '', userProfile.name)}
+          accounts={accounts}
+          activeAccountId={activeAccount?.id}
+          teamMembers={teamMembers}
+          currentUserId={currentUserId}
+          isInsideSettings={true}
+          onBack={() => setShowCompanyManagerPage(false)}
+          onSelectCompany={(companyId) => {
+            if (onSelectAccount) onSelectAccount(companyId);
+            setShowCompanyManagerPage(false);
+            showNotification('Switched company account');
+          }}
+          onCreateCompany={(companyName) => {
+            if (onAddAccount) onAddAccount(companyName);
+            setShowCompanyManagerPage(false);
+            showNotification(`Created company "${companyName}"`);
+          }}
+          onRefreshCompanies={onRefreshAccounts}
+        />
+      ) : showCompanyProfilePage ? (
         /* Company Profile Full Page */
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs space-y-5">
           <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
@@ -1329,6 +1364,26 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
             {openSections.company && (
               <div className="space-y-2.5 pt-4 mt-3 border-t border-slate-100">
+                {/* Company Accounts (Manager) Navigation Card */}
+                <button
+                  type="button"
+                  onClick={() => setShowCompanyManagerPage(true)}
+                  className="w-full bg-slate-50/70 hover:bg-slate-100/80 p-3.5 rounded-xl border border-slate-200/80 flex items-center justify-between gap-2 text-left transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <div>
+                      <span className="text-xs sm:text-sm font-bold text-slate-900 block">
+                        Company Accounts
+                      </span>
+                      <span className="text-[11px] text-slate-500 block">
+                        Switch company or create another company account
+                      </span>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                </button>
+
                 {/* Company Profile Navigation Card */}
                 <button
                   type="button"

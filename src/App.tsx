@@ -54,7 +54,7 @@ import { InstallModal } from './components/InstallModal';
 import { InstallBanner } from './components/InstallBanner';
 import { useAuth } from './context/AuthContext';
 import { LoginView } from './components/LoginView';
-import { CompanyOnboardingView } from './components/CompanyOnboardingView';
+import { CompanyManagerView } from './components/CompanyManagerView';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import {
   getExpenses,
@@ -1242,23 +1242,29 @@ export const App: React.FC = () => {
     return <LoginView />;
   }
 
-  // Post-login Company Onboarding: Create a Company (Admin) or Become a member of existing company
-  // Show gate if user hasn't completed onboarding or has no companies yet
+  // Post-login Company Selection / Creation Gate
+  // Show gate whenever user has no valid companies or has not selected one
   const userValidCompanies = accounts.filter(
     (a) => a.id !== DEFAULT_ACCOUNT_ID && !(a.id === 'default' && a.name === 'Demo company')
   );
 
-  if (!isDataLoading && (!onboardingDone || userValidCompanies.length === 0)) {
+  const isCompanySelected =
+    Boolean(activeAccountId) &&
+    activeAccountId !== DEFAULT_ACCOUNT_ID &&
+    userValidCompanies.some((a) => a.id === activeAccountId);
+
+  if (!isDataLoading && (!onboardingDone || !isCompanySelected || userValidCompanies.length === 0)) {
     const individualUserCode = buildIndividualUserLink(
       currentUserId,
       user?.user_metadata?.full_name || userProfile.name
     );
 
     return (
-      <CompanyOnboardingView
+      <CompanyManagerView
         userName={user?.user_metadata?.full_name || userProfile.name}
         userCode={individualUserCode}
-        availableCompanies={userValidCompanies}
+        accounts={userValidCompanies}
+        activeAccountId={activeAccountId}
         teamMembers={teamMembers}
         currentUserId={currentUserId}
         onCreateCompany={(companyName) => {
@@ -1279,7 +1285,7 @@ export const App: React.FC = () => {
           setOnboardingDone(true);
           handleSwitchAccount(companyId);
         }}
-        onCheckMembership={async () => {
+        onRefreshCompanies={async () => {
           const verified = await getAccountsFromSupabase();
           const validCompanies = verified.filter(
             (a) => a.id !== DEFAULT_ACCOUNT_ID && !(a.id === 'default' && a.name === 'Demo company')
@@ -1287,9 +1293,6 @@ export const App: React.FC = () => {
 
           if (validCompanies.length > 0) {
             setAccounts(validCompanies);
-            if (!validCompanies.some((a) => a.id === activeAccountId)) {
-              handleSwitchAccount(validCompanies[0].id);
-            }
             return true;
           }
           return false;
@@ -1416,10 +1419,22 @@ export const App: React.FC = () => {
                 expenseCategories={expenseCategories}
                 userProfile={userProfile}
                 activeAccount={activeAccount}
+                accounts={accounts.filter((a) => a.id !== DEFAULT_ACCOUNT_ID && !(a.id === 'default' && a.name === 'Demo company'))}
+                currentUserId={currentUserId}
                 isCompanyAdmin={isCompanyAdmin}
                 isCompanyCreator={Boolean(activeAccount?.ownerId && activeAccount.ownerId === currentUserId)}
+                onSelectAccount={handleSwitchAccount}
+                onAddAccount={handleAddAccount}
                 onUpdateAccount={handleUpdateAccount}
                 onDeleteAccount={handleDeleteAccount}
+                onRefreshAccounts={async () => {
+                  const verified = await getAccountsFromSupabase();
+                  const valid = verified.filter(
+                    (a) => a.id !== DEFAULT_ACCOUNT_ID && !(a.id === 'default' && a.name === 'Demo company')
+                  );
+                  setAccounts(valid);
+                  return valid.length > 0;
+                }}
                 onUpdateIncomeCategories={(cats) => {
                   if (!isCompanyAdmin) return;
                   setIncomeCategories(cats);
