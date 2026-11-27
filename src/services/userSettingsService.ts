@@ -121,71 +121,68 @@ export async function getAccountsFromSupabase(): Promise<Account[]> {
   } = await supabase.auth.getUser();
   if (!user) return getStoredAccounts();
 
-  const { data, error } = await supabase
+  // 1. Fetch current user's own settings (contains companies they created/own)
+  const { data: ownData, error: ownError } = await supabase
     .from('user_settings')
     .select('accounts')
     .eq('user_id', user.id)
     .maybeSingle();
 
-  if (error) {
-    console.error('Failed to fetch accounts from Supabase:', error.message);
-    return getStoredAccounts();
+  if (ownError) {
+    console.error('Failed to fetch accounts from Supabase:', ownError.message);
   }
 
-  const cloudAccounts = Array.isArray((data as { accounts?: unknown } | null)?.accounts)
-    ? ((data as { accounts: Account[] }).accounts).filter(
+  const ownAccounts = Array.isArray((ownData as { accounts?: unknown } | null)?.accounts)
+    ? ((ownData as { accounts: Account[] }).accounts).filter(
         (a) => !(a.id === 'default' && a.name === 'Demo company')
       )
     : [];
 
-  // Reconcile and validate non-owned company memberships:
-  // If this user does not own a company, verify that the company's owner still lists them in team_members
-  const verifiedAccounts: Account[] = [];
-  let accountsPruned = false;
-
-  for (const acc of cloudAccounts) {
-    // If the user is the creator/owner, they always retain their company
+  const verifiedMap = new Map<string, Account>();
+  for (const acc of ownAccounts) {
     if (!acc.ownerId || acc.ownerId === user.id) {
-      verifiedAccounts.push(acc);
-      continue;
+      verifiedMap.set(acc.id, acc);
     }
+  }
 
-    // Check if the company owner still has this user in their team_members roster
-    try {
-      const { data: ownerSettings } = await supabase
-        .from('user_settings')
-        .select('team_members')
-        .eq('user_id', acc.ownerId)
-        .maybeSingle();
+  // 2. Discover all companies across Supabase where this user is actively listed as a team member
+  try {
+    const { data: allSettings, error: allErr } = await supabase
+      .from('user_settings')
+      .select('user_id, accounts, team_members');
 
-      const ownerTeams = Array.isArray(
-        (ownerSettings as { team_members?: unknown } | null)?.team_members
-      )
-        ? ((ownerSettings as { team_members: TeamMember[] }).team_members)
-        : [];
+    if (!allErr && Array.isArray(allSettings)) {
+      for (const row of allSettings) {
+        // Skip user's own row as it was handled above
+        if (row.user_id === user.id) continue;
 
-      const stillMember = ownerTeams.some(
-        (m) => m.accountId === acc.id && (m.userId === user.id || m.userLink.includes(user.id))
-      );
+        const ownerTeams = Array.isArray(row.team_members) ? (row.team_members as TeamMember[]) : [];
+        const ownerAccounts = Array.isArray(row.accounts) ? (row.accounts as Account[]) : [];
 
-      if (stillMember) {
-        verifiedAccounts.push(acc);
-      } else {
-        // Membership was revoked by the admin!
-        accountsPruned = true;
+        // Check if any team member entry matches the current user
+        const memberships = ownerTeams.filter(
+          (m) => m.userId === user.id || (m.userLink && m.userLink.includes(user.id))
+        );
+
+        for (const membership of memberships) {
+          const matchingCompany = ownerAccounts.find((a) => a.id === membership.accountId);
+          if (matchingCompany && !verifiedMap.has(matchingCompany.id)) {
+            verifiedMap.set(matchingCompany.id, matchingCompany);
+          }
+        }
       }
-    } catch {
-      // If network fails to verify, keep account to avoid spurious removal
-      verifiedAccounts.push(acc);
     }
+  } catch (err) {
+    console.error('Error discovering company memberships from Supabase:', err);
   }
 
-  if (accountsPruned) {
-    void saveAccountsToSupabase(verifiedAccounts);
-  }
+  const finalAccounts = Array.from(verifiedMap.values());
 
-  saveStoredAccounts(verifiedAccounts);
-  return verifiedAccounts;
+  // Save the verified list to local storage and sync to user's settings row
+  saveStoredAccounts(finalAccounts);
+  void saveAccountsToSupabase(finalAccounts);
+
+  return finalAccounts;
 }
 
 export async function saveAccountsToSupabase(accounts: Account[]): Promise<void> {
