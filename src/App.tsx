@@ -85,7 +85,7 @@ export const App: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isLoading: isAuthLoading, offlineDemoMode } = useAuth();
-  const [isDataLoading, setIsDataLoading] = useState(true);
+  const [isDataLoading, setIsDataLoading] = useState(false);
 
   // Sync activeTab with current URL route
   const getTabFromPath = (pathname: string): ActiveTab => {
@@ -225,7 +225,14 @@ export const App: React.FC = () => {
     let isMounted = true;
 
     const syncFromCloud = (showLoader = false) => {
-      if (showLoader) setIsDataLoading(true);
+      let loaderTimer: ReturnType<typeof setTimeout> | null = null;
+      if (showLoader) {
+        setIsDataLoading(true);
+        // Safety failsafe: never let loader remain indefinitely
+        loaderTimer = setTimeout(() => {
+          if (isMounted) setIsDataLoading(false);
+        }, 5000);
+      }
       Promise.all([
         getExpenses(activeAccountId),
         getProjectsFromSupabase(activeAccountId),
@@ -310,6 +317,7 @@ export const App: React.FC = () => {
           console.error('Error syncing data from Supabase:', err);
         })
         .finally(() => {
+          if (loaderTimer) clearTimeout(loaderTimer);
           if (showLoader && isMounted) setIsDataLoading(false);
         });
     };

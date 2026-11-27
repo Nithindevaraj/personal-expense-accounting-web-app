@@ -138,9 +138,12 @@ export async function getAccountsFromSupabase(): Promise<Account[]> {
 
   // 1b. Load company divisions from public.company_divisions
   try {
-    const { data: divRows, error: divErr } = await supabase
-      .from('company_divisions')
-      .select('company_id, name');
+    const { data: divRows, error: divErr } = await Promise.race([
+      supabase.from('company_divisions').select('company_id, name'),
+      new Promise<{ data: null; error: { message: string } }>((resolve) =>
+        setTimeout(() => resolve({ data: null, error: { message: 'timeout' } }), 4000)
+      ),
+    ]);
 
     if (!divErr && Array.isArray(divRows) && divRows.length > 0) {
       const divisionsByCompany = new Map<string, string[]>();
@@ -235,7 +238,10 @@ export async function getAccountsFromSupabase(): Promise<Account[]> {
   // Only persist back to Supabase if we have valid accounts or verified from ownAccounts
   if (finalAccounts.length > 0) {
     saveStoredAccounts(finalAccounts);
-    void saveAccountsToSupabase(finalAccounts);
+    // Background async sync so we do not block or loop getAccountsFromSupabase caller
+    setTimeout(() => {
+      void saveAccountsToSupabase(finalAccounts);
+    }, 0);
   } else if (localAccounts.length > 0) {
     return localAccounts;
   }
@@ -276,10 +282,15 @@ export async function saveAccountsToSupabase(accounts: Account[]): Promise<void>
         // Sync divisions to public.company_divisions
         if (Array.isArray(acc.divisions)) {
           // Clean removed divisions & upsert active ones
-          const { data: existingDivs } = await supabase
-            .from('company_divisions')
-            .select('id, name')
-            .eq('company_id', acc.id);
+          const { data: existingDivs } = await Promise.race([
+            supabase
+              .from('company_divisions')
+              .select('id, name')
+              .eq('company_id', acc.id),
+            new Promise<{ data: null }>((resolve) =>
+              setTimeout(() => resolve({ data: null }), 3000)
+            ),
+          ]);
 
           const existingNames = new Set((existingDivs || []).map((d) => d.name));
           const currentDivs = new Set(acc.divisions);
