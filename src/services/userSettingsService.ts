@@ -235,15 +235,13 @@ export async function getAccountsFromSupabase(): Promise<Account[]> {
 
   const finalAccounts = Array.from(verifiedMap.values());
 
-  // Only persist back to Supabase if we have valid accounts or verified from ownAccounts
+  // Persist updated list to local cache
+  saveStoredAccounts(finalAccounts);
   if (finalAccounts.length > 0) {
-    saveStoredAccounts(finalAccounts);
     // Background async sync so we do not block or loop getAccountsFromSupabase caller
     setTimeout(() => {
       void saveAccountsToSupabase(finalAccounts);
     }, 0);
-  } else if (localAccounts.length > 0) {
-    return localAccounts;
   }
 
   return finalAccounts;

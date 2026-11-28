@@ -563,6 +563,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             setShowCompanyManagerPage(false);
             showNotification(`Created company "${companyName}"`);
           }}
+          onDeleteCompany={(companyId) => {
+            if (onDeleteAccount) onDeleteAccount(companyId);
+            showNotification('Deleted company');
+          }}
           onRefreshCompanies={onRefreshAccounts}
         />
       ) : showCompanyProfilePage ? (

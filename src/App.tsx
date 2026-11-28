@@ -883,7 +883,7 @@ export const App: React.FC = () => {
     // Identify all members belonging to this company before removing it
     const companyTeamMembers = teamMembers.filter((m) => m.accountId === id);
 
-    const nextAccounts = accounts.filter((a) => a.id !== id);
+    const nextAccounts = accounts.filter((a) => a.id !== id && a.id !== DEFAULT_ACCOUNT_ID && !(a.id === 'default' && a.name === 'Demo company'));
     setAccounts(nextAccounts);
     saveStoredAccounts(nextAccounts);
 
@@ -894,6 +894,21 @@ export const App: React.FC = () => {
     const remainingTeams = teamMembers.filter((m) => m.accountId !== id);
     setTeamMembers(remainingTeams);
     saveStoredTeamMembers(remainingTeams);
+
+    // Check if user has any participating companies remaining (owned or member)
+    const hasAnyRemainingCompany = nextAccounts.length > 0;
+
+    if (!hasAnyRemainingCompany) {
+      setOnboardingDone(false);
+      setActiveAccountId(DEFAULT_ACCOUNT_ID);
+      saveActiveAccountId(DEFAULT_ACCOUNT_ID);
+      setTransactions([]);
+      setProjects([]);
+      setTxLedgerFilter({});
+    } else if (activeAccountId === id) {
+      const nextActiveId = nextAccounts[0]?.id || DEFAULT_ACCOUNT_ID;
+      handleSwitchAccount(nextActiveId);
+    }
 
     // Completely purge from Supabase backend across all relational and user tables
     if (isSupabaseConfigured) {
@@ -941,21 +956,6 @@ export const App: React.FC = () => {
       } catch (err) {
         console.error('Error deleting company data from Supabase:', err);
       }
-    }
-
-    if (nextAccounts.length === 0) {
-      setOnboardingDone(false);
-      setActiveAccountId(DEFAULT_ACCOUNT_ID);
-      saveActiveAccountId(DEFAULT_ACCOUNT_ID);
-      setTransactions([]);
-      setProjects([]);
-      setTxLedgerFilter({});
-      return;
-    }
-
-    if (activeAccountId === id) {
-      const nextActiveId = nextAccounts[0]?.id || DEFAULT_ACCOUNT_ID;
-      handleSwitchAccount(nextActiveId);
     }
   };
 
@@ -1284,6 +1284,7 @@ export const App: React.FC = () => {
           setOnboardingDone(true);
           handleSwitchAccount(companyId);
         }}
+        onDeleteCompany={handleDeleteAccount}
         onRefreshCompanies={async () => {
           const verified = await getAccountsFromSupabase();
           const validCompanies = verified.filter(
