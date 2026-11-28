@@ -116,18 +116,61 @@ export function saveStoredRecurringTransactions(recurring: RecurringTransaction[
 }
 
 const ACCOUNTS_STORAGE_KEY = 'accounting_stored_accounts_cache';
+const DELETED_COMPANIES_KEY = 'accounting_deleted_company_ids';
+
+export function getDeletedCompanyIds(): string[] {
+  try {
+    const raw = localStorage.getItem(DELETED_COMPANIES_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {
+    // ignore
+  }
+  return [];
+}
+
+export function addDeletedCompanyId(companyId: string): void {
+  if (!companyId) return;
+  try {
+    const existing = getDeletedCompanyIds();
+    if (!existing.includes(companyId)) {
+      const updated = [...existing, companyId];
+      localStorage.setItem(DELETED_COMPANIES_KEY, JSON.stringify(updated));
+    }
+  } catch {
+    // ignore
+  }
+}
+
+export function clearDeletedCompanyId(companyId: string): void {
+  if (!companyId) return;
+  try {
+    const existing = getDeletedCompanyIds();
+    if (existing.includes(companyId)) {
+      const updated = existing.filter((id) => id !== companyId);
+      localStorage.setItem(DELETED_COMPANIES_KEY, JSON.stringify(updated));
+    }
+  } catch {
+    // ignore
+  }
+}
 
 export function getStoredAccounts(): Account[] {
   if (memoryCache.accounts && memoryCache.accounts.length > 0) {
-    return memoryCache.accounts;
+    const deleted = getDeletedCompanyIds();
+    return memoryCache.accounts.filter((a) => !deleted.includes(a.id));
   }
   try {
     const saved = localStorage.getItem(ACCOUNTS_STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        memoryCache.accounts = parsed;
-        return parsed;
+        const deleted = getDeletedCompanyIds();
+        const filtered = parsed.filter((a) => !deleted.includes(a.id));
+        memoryCache.accounts = filtered;
+        return filtered;
       }
     }
   } catch {

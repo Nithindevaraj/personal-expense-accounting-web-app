@@ -16,6 +16,7 @@ import {
   saveStoredIncomeCategories,
   saveStoredRecurringTransactions,
   saveStoredTeamMembers,
+  getDeletedCompanyIds,
 } from '../utils/storage';
 
 interface DbUserSettingsRow {
@@ -114,6 +115,8 @@ export async function getAccountsFromSupabase(): Promise<Account[]> {
 
   const verifiedMap = new Map<string, Account>();
 
+  const deletedCompanyIds = new Set(getDeletedCompanyIds());
+
   // 1. Fetch companies created by the user directly from public.companies
   try {
     const { data: createdCompanies, error: compErr } = await supabase
@@ -123,6 +126,7 @@ export async function getAccountsFromSupabase(): Promise<Account[]> {
 
     if (!compErr && Array.isArray(createdCompanies)) {
       for (const comp of createdCompanies) {
+        if (deletedCompanyIds.has(comp.id)) continue;
         verifiedMap.set(comp.id, {
           id: comp.id,
           name: comp.name,
@@ -181,7 +185,7 @@ export async function getAccountsFromSupabase(): Promise<Account[]> {
       for (const row of memberRows) {
         // Handle joined company row or flat company_id
         const comp = row.companies as unknown as { id: string; name: string; company_code?: string; creator_id?: string; created_at?: string } | null;
-        if (comp && comp.id && !verifiedMap.has(comp.id)) {
+        if (comp && comp.id && !deletedCompanyIds.has(comp.id) && !verifiedMap.has(comp.id)) {
           verifiedMap.set(comp.id, {
             id: comp.id,
             name: comp.name,
@@ -206,12 +210,12 @@ export async function getAccountsFromSupabase(): Promise<Account[]> {
 
     const ownAccounts = Array.isArray((ownData as { accounts?: unknown } | null)?.accounts)
       ? ((ownData as { accounts: Account[] }).accounts).filter(
-          (a) => !(a.id === 'default' && a.name === 'Demo company')
+          (a) => !(a.id === 'default' && a.name === 'Demo company') && !deletedCompanyIds.has(a.id)
         )
       : [];
 
     for (const acc of ownAccounts) {
-      if (!verifiedMap.has(acc.id) && (!acc.ownerId || acc.ownerId === user.id)) {
+      if (!deletedCompanyIds.has(acc.id) && !verifiedMap.has(acc.id) && (!acc.ownerId || acc.ownerId === user.id)) {
         verifiedMap.set(acc.id, acc);
       } else if (verifiedMap.has(acc.id) && Array.isArray(acc.divisions) && (!verifiedMap.get(acc.id)!.divisions || verifiedMap.get(acc.id)!.divisions!.length === 0)) {
         verifiedMap.get(acc.id)!.divisions = acc.divisions;
@@ -224,7 +228,7 @@ export async function getAccountsFromSupabase(): Promise<Account[]> {
   // Merge local accounts (guarantee no locally created companies are dropped)
   const localAccounts = getStoredAccounts();
   for (const loc of localAccounts) {
-    if (!verifiedMap.has(loc.id)) {
+    if (!deletedCompanyIds.has(loc.id) && !verifiedMap.has(loc.id)) {
       if (!loc.ownerId || loc.ownerId === user.id) {
         verifiedMap.set(loc.id, loc);
       }
@@ -233,7 +237,7 @@ export async function getAccountsFromSupabase(): Promise<Account[]> {
     }
   }
 
-  const finalAccounts = Array.from(verifiedMap.values());
+  const finalAccounts = Array.from(verifiedMap.values()).filter((a) => !deletedCompanyIds.has(a.id));
 
   // Persist updated list to local cache
   saveStoredAccounts(finalAccounts);
@@ -241,6 +245,11 @@ export async function getAccountsFromSupabase(): Promise<Account[]> {
     // Background async sync so we do not block or loop getAccountsFromSupabase caller
     setTimeout(() => {
       void saveAccountsToSupabase(finalAccounts);
+    }, 0);
+  } else {
+    // If all accounts are deleted, clean Supabase user_settings cache immediately
+    setTimeout(() => {
+      void saveAccountsToSupabase([]);
     }, 0);
   }
 

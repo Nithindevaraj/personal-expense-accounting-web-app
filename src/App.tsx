@@ -18,6 +18,8 @@ import {
 } from './types';
 import {
   type UserProfile,
+  addDeletedCompanyId,
+  clearDeletedCompanyId,
   buildIndividualUserCode,
   buildIndividualUserLink,
   getActiveAccountId,
@@ -821,6 +823,7 @@ export const App: React.FC = () => {
 
   const handleAddAccount = async (name: string) => {
     const newAccountId = `acc-${Date.now()}`;
+    clearDeletedCompanyId(newAccountId);
     const newAccount: Account = {
       id: newAccountId,
       name,
@@ -879,6 +882,9 @@ export const App: React.FC = () => {
   const handleDeleteAccount = async (id: string) => {
     const target = accounts.find((a) => a.id === id);
     if (!isUserCompanyAdmin(target, currentUserId, teamMembers)) return;
+
+    // Record company in deleted companies registry immediately
+    addDeletedCompanyId(id);
 
     // Identify all members belonging to this company before removing it
     const companyTeamMembers = teamMembers.filter((m) => m.accountId === id);
