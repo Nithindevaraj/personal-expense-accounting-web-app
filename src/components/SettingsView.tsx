@@ -356,10 +356,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const handleRemoveDivision = (division: string) => {
     if (!activeAccount || !onUpdateAccount) return;
     const existing = activeAccount.divisions || [];
+    const updatedDivisions = existing.filter((d) => d !== division);
     onUpdateAccount({
       ...activeAccount,
-      divisions: existing.filter((d) => d !== division),
+      divisions: updatedDivisions,
     });
+    showNotification(`Removed division: ${division}`);
   };
 
   const handleMemberLinkChange = (value: string) => {

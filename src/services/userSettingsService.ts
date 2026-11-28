@@ -272,7 +272,7 @@ export async function saveAccountsToSupabase(accounts: Account[]): Promise<void>
     console.error('Failed to save accounts to Supabase:', error.message);
   }
 
-  // Also sync to public.companies table if table exists
+  // Also sync to public.companies & public.company_divisions tables if tables exist
   try {
     for (const acc of accounts) {
       if (acc.ownerId === user.id) {
@@ -285,40 +285,40 @@ export async function saveAccountsToSupabase(accounts: Account[]): Promise<void>
             updated_at: new Date().toISOString(),
           },
         ], { onConflict: 'id' });
+      }
 
-        // Sync divisions to public.company_divisions
-        if (Array.isArray(acc.divisions)) {
-          // Clean removed divisions & upsert active ones
-          const { data: existingDivs } = await Promise.race([
-            supabase
-              .from('company_divisions')
-              .select('id, name')
-              .eq('company_id', acc.id),
-            new Promise<{ data: null }>((resolve) =>
-              setTimeout(() => resolve({ data: null }), 3000)
-            ),
-          ]);
+      // Sync divisions to public.company_divisions for any administered company
+      if (Array.isArray(acc.divisions)) {
+        // Clean removed divisions & upsert active ones
+        const { data: existingDivs } = await Promise.race([
+          supabase
+            .from('company_divisions')
+            .select('id, name')
+            .eq('company_id', acc.id),
+          new Promise<{ data: null }>((resolve) =>
+            setTimeout(() => resolve({ data: null }), 3000)
+          ),
+        ]);
 
-          const existingNames = new Set((existingDivs || []).map((d) => d.name));
-          const currentDivs = new Set(acc.divisions);
+        const existingNames = new Set((existingDivs || []).map((d) => d.name));
+        const currentDivs = new Set(acc.divisions);
 
-          // Delete divisions no longer in account
-          for (const d of (existingDivs || [])) {
-            if (!currentDivs.has(d.name)) {
-              await supabase.from('company_divisions').delete().eq('id', d.id);
-            }
+        // Delete divisions no longer in account
+        for (const d of (existingDivs || [])) {
+          if (!currentDivs.has(d.name)) {
+            await supabase.from('company_divisions').delete().eq('id', d.id);
           }
+        }
 
-          // Insert newly added divisions
-          for (const divName of acc.divisions) {
-            if (!existingNames.has(divName)) {
-              await supabase.from('company_divisions').insert([
-                {
-                  company_id: acc.id,
-                  name: divName,
-                },
-              ]);
-            }
+        // Insert newly added divisions
+        for (const divName of acc.divisions) {
+          if (!existingNames.has(divName)) {
+            await supabase.from('company_divisions').insert([
+              {
+                company_id: acc.id,
+                name: divName,
+              },
+            ]);
           }
         }
       }
