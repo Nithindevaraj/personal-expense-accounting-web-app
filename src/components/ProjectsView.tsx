@@ -317,7 +317,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         description: description.trim(),
         budget: parsedBudget,
         color,
-        division: !parentForNewSub ? (division || null) : editingProject.division,
+        division: !parentForNewSub ? (division.trim() || null) : editingProject.division,
         teamMembers: !parentForNewSub ? projectTeam : editingProject.teamMembers,
       });
     } else {
@@ -327,7 +327,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         description: description.trim(),
         budget: parsedBudget,
         color,
-        division: !parentForNewSub ? (division || null) : undefined,
+        division: !parentForNewSub ? (division.trim() || null) : undefined,
         ownerId: currentUserId,
         teamMembers: !parentForNewSub ? projectTeam : undefined,
       });
@@ -585,9 +585,16 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                       className="w-3.5 h-3.5 rounded-full shrink-0 shadow-xs"
                       style={{ backgroundColor: p.color || '#3b82f6' }}
                     />
-                    <h3 className="font-bold text-slate-900 text-base tracking-tight truncate max-w-[150px]">
-                      {p.name}
-                    </h3>
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-slate-900 text-base tracking-tight truncate max-w-[150px]">
+                        {p.name}
+                      </h3>
+                      {p.division && (
+                        <span className="inline-block px-2 py-0.5 mt-0.5 rounded-md bg-indigo-50 border border-indigo-200/80 text-[10px] font-bold text-indigo-700 truncate max-w-[140px]">
+                          {p.division}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-1.5 opacity-80 group-hover:opacity-100">
@@ -815,7 +822,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                 );
 
                 const hasDivisions =
-                  divisions.length > 0 || calculatedProjects.some((p) => Boolean(p.division));
+                  divisions.length > 0 || calculatedProjects.some((p) => Boolean(p.division && p.division.trim()));
 
                 if (!hasDivisions) {
                   return (
@@ -825,20 +832,27 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                   );
                 }
 
-                const orderedDivisions = [...divisions];
+                const orderedDivisions: string[] = [];
+                for (const d of divisions) {
+                  const trimmed = d.trim();
+                  if (trimmed && !orderedDivisions.some((od) => od.toLowerCase() === trimmed.toLowerCase())) {
+                    orderedDivisions.push(trimmed);
+                  }
+                }
                 for (const p of calculatedProjects) {
-                  if (p.division && !orderedDivisions.includes(p.division)) {
-                    orderedDivisions.push(p.division);
+                  const div = p.division?.trim();
+                  if (div && !orderedDivisions.some((od) => od.toLowerCase() === div.toLowerCase())) {
+                    orderedDivisions.push(div);
                   }
                 }
 
-                const unassigned = calculatedProjects.filter((p) => !p.division);
+                const unassigned = calculatedProjects.filter((p) => !p.division || !p.division.trim());
 
                 return (
                   <div className="space-y-6">
                     {orderedDivisions.map((divName) => {
                       const divProjects = calculatedProjects.filter(
-                        (p) => p.division === divName
+                        (p) => p.division && p.division.trim().toLowerCase() === divName.toLowerCase()
                       );
                       return (
                         <div key={divName} className="space-y-3">
@@ -948,12 +962,23 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                         </span>
                       </td>
                       <td className="p-3 text-center">
-                        <button
-                          onClick={() => onViewProjectTransactions(p.name)}
-                          className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 cursor-pointer"
-                        >
-                          View Ledger
-                        </button>
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => onViewProjectTransactions(p.name)}
+                            className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 cursor-pointer"
+                          >
+                            View Ledger
+                          </button>
+                          {isCompanyAdmin && (
+                            <button
+                              onClick={() => handleOpenEdit(p)}
+                              className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-700 cursor-pointer"
+                              title="Edit project"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                     {p.subProjects.map((sub) => (
@@ -1008,25 +1033,32 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                 );
 
                 const hasDivisions =
-                  divisions.length > 0 || calculatedProjects.some((p) => Boolean(p.division));
+                  divisions.length > 0 || calculatedProjects.some((p) => Boolean(p.division && p.division.trim()));
 
                 if (!hasDivisions) {
                   return calculatedProjects.map(renderMatrixRows);
                 }
 
-                const orderedDivisions = [...divisions];
-                for (const p of calculatedProjects) {
-                  if (p.division && !orderedDivisions.includes(p.division)) {
-                    orderedDivisions.push(p.division);
+                const orderedDivisions: string[] = [];
+                for (const d of divisions) {
+                  const trimmed = d.trim();
+                  if (trimmed && !orderedDivisions.some((od) => od.toLowerCase() === trimmed.toLowerCase())) {
+                    orderedDivisions.push(trimmed);
                   }
                 }
-                const unassigned = calculatedProjects.filter((p) => !p.division);
+                for (const p of calculatedProjects) {
+                  const div = p.division?.trim();
+                  if (div && !orderedDivisions.some((od) => od.toLowerCase() === div.toLowerCase())) {
+                    orderedDivisions.push(div);
+                  }
+                }
+                const unassigned = calculatedProjects.filter((p) => !p.division || !p.division.trim());
 
                 return (
                   <>
                     {orderedDivisions.map((divName) => {
                       const divProjects = calculatedProjects.filter(
-                        (p) => p.division === divName
+                        (p) => p.division && p.division.trim().toLowerCase() === divName.toLowerCase()
                       );
                       if (divProjects.length === 0) return null;
                       return (
@@ -1261,26 +1293,42 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                 />
               </div>
 
-              {!parentForNewSub && (divisions.length > 0 || division) && (
+              {!parentForNewSub && (
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Division
-                  </label>
-                  <select
-                    value={division}
-                    onChange={(e) => setDivision(e.target.value)}
-                    className="w-full px-3 py-2.5 text-base sm:text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-medium text-slate-800"
-                  >
-                    <option value="">General / Unassigned</option>
-                    {divisions.map((divName) => (
-                      <option key={divName} value={divName}>
-                        {divName}
-                      </option>
-                    ))}
-                    {division && !divisions.includes(division) && (
-                      <option value={division}>{division}</option>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-slate-700">
+                      Division
+                    </label>
+                    {divisions.length === 0 && (
+                      <span className="text-[10px] text-slate-400">
+                        Create divisions in Settings &gt; Company Divisions
+                      </span>
                     )}
-                  </select>
+                  </div>
+                  {divisions.length > 0 ? (
+                    <select
+                      value={division}
+                      onChange={(e) => setDivision(e.target.value)}
+                      className="w-full px-3 py-2.5 text-base sm:text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-medium text-slate-800"
+                    >
+                      <option value="">General / Unassigned</option>
+                      {divisions.map((divName) => (
+                        <option key={divName} value={divName}>
+                          {divName}
+                        </option>
+                      ))}
+                      {division && !divisions.includes(division) && (
+                        <option value={division}>{division}</option>
+                      )}
+                    </select>
+                  ) : (
+                    <div className="p-2.5 rounded-xl border border-dashed border-slate-200 bg-slate-50/60 text-xs text-slate-500 flex items-center justify-between gap-2">
+                      <span>No company divisions created yet.</span>
+                      <span className="text-[11px] font-semibold text-indigo-600">
+                        Add in Settings
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
 

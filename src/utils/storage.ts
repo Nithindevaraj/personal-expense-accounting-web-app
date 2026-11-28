@@ -197,13 +197,27 @@ export function saveStoredTransactions(
   memoryCache.transactions.set(accountId, transactions);
 }
 
+const PROJECTS_STORAGE_PREFIX = 'accounting_stored_projects_cache_';
+
 export function getStoredProjects(accountId: string = ''): Project[] {
-  if (!memoryCache.projects.has(accountId)) {
-    const def = createDefaultProjectsForAccount(accountId);
-    memoryCache.projects.set(accountId, def);
-    return def;
+  if (memoryCache.projects.has(accountId)) {
+    return memoryCache.projects.get(accountId) || [];
   }
-  return memoryCache.projects.get(accountId) || [];
+  try {
+    const saved = localStorage.getItem(`${PROJECTS_STORAGE_PREFIX}${accountId || 'default'}`);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        memoryCache.projects.set(accountId, parsed);
+        return parsed;
+      }
+    }
+  } catch {
+    // ignore localStorage errors in private browsing
+  }
+  const def = createDefaultProjectsForAccount(accountId);
+  memoryCache.projects.set(accountId, def);
+  return def;
 }
 
 export function saveStoredProjects(
@@ -211,6 +225,15 @@ export function saveStoredProjects(
   accountId: string = ''
 ): void {
   memoryCache.projects.set(accountId, projects);
+  try {
+    if (projects && projects.length > 0) {
+      localStorage.setItem(`${PROJECTS_STORAGE_PREFIX}${accountId || 'default'}`, JSON.stringify(projects));
+    } else {
+      localStorage.removeItem(`${PROJECTS_STORAGE_PREFIX}${accountId || 'default'}`);
+    }
+  } catch {
+    // ignore
+  }
 }
 
 export function getStoredIncomeCategories(): string[] {

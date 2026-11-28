@@ -52,12 +52,12 @@ function mapProjectToPayload(
     completed_at: project.completedAt ? new Date(project.completedAt).toISOString() : null,
     created_at: project.createdAt ? new Date(project.createdAt).toISOString() : new Date().toISOString(),
     company_id: accountId,
+    division: project.division ? project.division.trim() || null : null,
   };
 
   if (!includeExtendedFields) return base;
   return {
     ...base,
-    division: project.division || null,
     team_members: project.teamMembers || [],
   };
 }
@@ -78,9 +78,20 @@ export async function getProjectsFromSupabase(accountId: string = 'default'): Pr
     return getStoredProjects(accountId);
   }
 
+  const localStored = getStoredProjects(accountId);
+  const localById = new Map(localStored.map((p) => [p.id, p]));
+
   const rows = (data as DbProjectRow[]) || [];
   const mapped = rows
-    .map((row) => mapRowToProject(row))
+    .map((row) => {
+      const proj = mapRowToProject(row);
+      const localProj = localById.get(proj.id);
+      // Preserve local division if row does not have division or if locally set and cloud is null
+      if (localProj && localProj.division && !proj.division) {
+        proj.division = localProj.division;
+      }
+      return proj;
+    })
     .filter((p) => {
       // Exclude legacy demo projects and general transactions
       const id = p.id.toLowerCase();
@@ -104,29 +115,58 @@ export async function upsertProjectToSupabase(
   const { data: authData } = await supabase.auth.getUser();
   const currentUid = authData?.user?.id;
 
-  const payloadWithCreator = {
+  // Always attempt full upsert first including division & creator
+  const fullPayload = {
     ...mapProjectToPayload(project, accountId, true),
     ...(currentUid ? { creator_id: currentUid } : {}),
   };
 
   const { error } = await supabase
     .from('projects')
-    .upsert([payloadWithCreator], { onConflict: 'id' });
+    .upsert([fullPayload], { onConflict: 'id' });
 
   if (error) {
-    if (error.message.includes('team_members') || error.message.includes('division') || error.message.includes('creator_id')) {
-      const fallbackPayload = {
+    // If error was caused by missing team_members column, fallback payload without team_members but KEEP division
+    if (error.message.includes('team_members')) {
+      const payloadWithoutTeam = {
         ...mapProjectToPayload(project, accountId, false),
         ...(currentUid ? { creator_id: currentUid } : {}),
       };
-      const { error: fallbackError } = await supabase
+      const { error: teamError } = await supabase
         .from('projects')
-        .upsert([fallbackPayload], { onConflict: 'id' });
-      if (fallbackError) {
-        console.error('Failed to upsert project in Supabase:', fallbackError.message);
+        .upsert([payloadWithoutTeam], { onConflict: 'id' });
+      if (teamError) {
+        // If division column specifically is absent from remote DB, strip division
+        if (teamError.message.includes('division')) {
+          const { division: _d, ...payloadWithoutDiv } = payloadWithoutTeam;
+          const { error: divFallbackError } = await supabase
+            .from('projects')
+            .upsert([payloadWithoutDiv], { onConflict: 'id' });
+          if (divFallbackError) {
+            console.error('Failed to upsert project in Supabase (fallback):', divFallbackError.message);
+          }
+        } else {
+          console.error('Failed to upsert project in Supabase:', teamError.message);
+        }
       }
       return;
     }
+
+    if (error.message.includes('division')) {
+      const payloadWithoutTeam = {
+        ...mapProjectToPayload(project, accountId, false),
+        ...(currentUid ? { creator_id: currentUid } : {}),
+      };
+      const { division: _d, ...payloadWithoutDiv } = payloadWithoutTeam;
+      const { error: divFallbackError } = await supabase
+        .from('projects')
+        .upsert([payloadWithoutDiv], { onConflict: 'id' });
+      if (divFallbackError) {
+        console.error('Failed to upsert project in Supabase (fallback):', divFallbackError.message);
+      }
+      return;
+    }
+
     console.error('Failed to upsert project in Supabase:', error.message);
   }
 }

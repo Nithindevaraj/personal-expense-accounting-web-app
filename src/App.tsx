@@ -439,7 +439,6 @@ export const App: React.FC = () => {
             event: '*',
             schema: 'public',
             table: 'projects',
-            filter: `user_id=eq.${user.id}`,
           },
           () => {
             getProjectsFromSupabase(activeAccountId)
